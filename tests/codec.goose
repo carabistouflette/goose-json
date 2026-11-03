@@ -104,6 +104,17 @@ fn main() {
     for i in 100000 { long_integer.push('9'); }
     assert(json_codec::deserialize_into(long_integer, integer).len > 0);
 
+    var maximum = Float { value: 1.7976931348623157e308 };
+    let max_text, max_write_error = json_codec::serialize(maximum);
+    assert(max_write_error.len == 0);
+    let max_back, max_read_error = json_codec::deserialize<Float>(max_text);
+    assert(max_read_error.len == 0 && max_back.value == maximum.value);
+    var minimum = Float { value: 5e-324 };
+    let min_text, min_write_error = json_codec::serialize(minimum);
+    assert(min_write_error.len == 0);
+    let min_back, min_read_error = json_codec::deserialize<Float>(min_text);
+    assert(min_read_error.len == 0 && min_back.value == minimum.value);
+
     // Results own their strings: a temporary source can die before use.
     fn owned() -> Item {
         var source = str("{\"id\":7,\"active\":false,\"name\":\"owned\"}");
