@@ -32,7 +32,7 @@ Replace `<commit>` with a published full commit hash. Inside this checkout, use 
 
 ## Cost and limits
 
-Parsing uses Goose's streaming reader, with no document tree. Field dispatch is a linear comparison over the compile-time expanded fields: O(input bytes + object members × schema fields). It allocates a seen-field bitmap per object, scratch storage for escaped keys/strings, and owned text/array results. Unescaped strings are copied once into their owner; escaped strings pass through scratch first. Serialization appends directly to a grow-only builder, with compile-time expanded field access.
+Parsing uses Goose's streaming reader, with no document tree. Field dispatch is a linear comparison over the compile-time expanded fields: O(input bytes + object members × schema fields). It allocates a seen-field flags per object, scratch storage for escaped keys/strings, and owned text/array results. Unescaped strings are copied once into their owner; escaped strings pass through scratch first. Serialization appends directly to a grow-only builder, with compile-time expanded field access.
 
 Input is limited to 1 MiB (`MAX_INPUT_BYTES`) before parsing and is checked for UTF-8 in a linear pass. Unknown fields fail immediately rather than walking arbitrary nested input. Recursion follows the finite, statically known schema; no recursive reference graphs are supported. The input cap bounds accepted wire size, not an exact allocator budget: wide schemas and tiny scalar arrays can expand in memory. Serialization has no output-size cap. No throughput or allocation benchmark claims are made.
 
