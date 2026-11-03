@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: Apache-2.0
+import json_codec from "..";
+import json;
+import std;
+import os;
+
+struct Item { id: i64, active: bool, name: json_codec::Text }
+struct Numbers { values: i64[>..] }
+let SAMPLES = 7;
+
+fn consume(value: Item&) -> i64 { value.id + value.name.bytes.len + (if value.active { 1 } else { 0 }) }
+fn consume(value: Numbers&) -> i64 { value.values.len + value.values[0] + value.values[value.values.len - 1] }
+
+fn decode_batch<T>(text: u8[:], count: i64) -> i64 {
+    var checksum = 0;
+    for i in count {
+        var value, error = json_codec::deserialize<T>(text);
+        assert(error.len == 0);
+        checksum += consume(value);
+    }
+    return checksum;
+}
+fn encode_batch<T>(value: T&, count: i64) -> i64 {
+    var checksum = 0;
+    for i in count {
+        let text, error = json_codec::serialize(value);
+        assert(error.len == 0 && text.len > 0);
+        checksum += text.len + text[i % text.len];
+    }
+    return checksum;
+}
+
+// Untyped, borrowing DOM baseline. It intentionally performs no schema mapping,
+// required/unknown/duplicate-field checks, or owned string construction.
+fn dom_batch(text: u8[:], count: i64) -> i64 {
+    var checksum = 0;
+    for i in count {
+        var nodes:   json::Node[>..] = [];
+        var decoded: u8[>..]         = [];
+        let root, error = json::parse(text, nodes, decoded);
+        assert(error.len == 0 && root);
+        checksum += nodes.len + decoded.len;
+    }
+    return checksum;
+}
+
+fn report(implementation: u8[:], name: u8[:], operation: u8[:], bytes: i64, count: i64, times: f64[:], checksum: i64) {
+    for i in times.len {
+        for j in i + 1..times.len {
+            if times[j] < times[i] { let t = times[i]; times[i] = times[j]; times[j] = t; }
+        }
+    }
+    var row = str("| ", implementation, " | ", name, " | ", operation, " | ", bytes, " | ", count, " | ");
+    format_flt(row, times[times.len / 2], 1);
+    row.append(" | "); format_flt(row, times[0], 1);
+    row.append("–"); format_flt(row, times[times.len - 1], 1);
+    format(row, " | ", checksum, " |");
+    print(row);
+}
+
+fn benchmark<T>(name: u8[:], count: i64) {
+    var input: u8[>..] = [];
+    assert(read_file(str("bench/fixtures/", name, ".json"), input));
+    var value, error = json_codec::deserialize<T>(input);
+    assert(error.len == 0);
+    let encoded, encode_error = json_codec::serialize(value);
+    assert(encode_error.len == 0);
+    var roundtrip, roundtrip_error = json_codec::deserialize<T>(encoded);
+    assert(roundtrip_error.len == 0 && consume(roundtrip) == consume(value));
+    let warmup = min(count, 1000);
+    var decode_checksum = decode_batch<T>(input, warmup);
+    var encode_checksum = encode_batch(value, warmup);
+    var dom_checksum = dom_batch(input, warmup);
+    var decode: f64[SAMPLES] = [0.0; SAMPLES];
+    var encode: f64[SAMPLES] = [0.0; SAMPLES];
+    var dom:    f64[SAMPLES] = [0.0; SAMPLES];
+    for sample in SAMPLES {
+        let start_decode = clock_ns();
+        decode_checksum += decode_batch<T>(input, count);
+        decode[sample] = (clock_ns() - start_decode) / (count as f64);
+        let start_encode = clock_ns();
+        encode_checksum += encode_batch(value, count);
+        encode[sample] = (clock_ns() - start_encode) / (count as f64);
+        let start_dom = clock_ns();
+        dom_checksum += dom_batch(input, count);
+        dom[sample] = (clock_ns() - start_dom) / (count as f64);
+    }
+    report("goose-json", name, "decode", input.len, count, decode, decode_checksum);
+    report("goose-json", name, "encode", encoded.len, count, encode, encode_checksum);
+    report("Goose DOM", name, "decode", input.len, count, dom, dom_checksum);
+}
+
+fn main() {
+    var count: i64 = 100000;
+    if arg_count() > 1 {
+        var argument: u8[>..] = [];
+        arg(1, argument);
+        let parsed, ok = parse_int(argument);
+        assert(ok && parsed > 0 && parsed <= 10000000);
+        count = parsed;
+    }
+    print("| Implementation | Fixture | Operation | Bytes | Iterations/sample | Median ns/op | Min–max ns/op | Checksum |");
+    print("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |");
+    benchmark<Item>("plain", count);
+    benchmark<Item>("escaped", count);
+    benchmark<Numbers>("array", max(1, count / 10));
+}
