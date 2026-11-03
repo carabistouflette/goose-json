@@ -1,4 +1,4 @@
-Measured 2026-11-03 UTC. [Hardware, compiler flags, source revisions, commands and caveats](../README.md).
+Measured 2026-11-03 UTC. [Hardware, compiler flags, source revisions, commands and caveats](2026-11-03-methodology.md).
 
 | Implementation | Fixture | Operation | Bytes | Iterations/sample | Median ns/op | Min–max ns/op | Checksum |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |

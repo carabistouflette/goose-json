@@ -38,22 +38,26 @@ Floating-point tokens are limited to 128 bytes (`MAX_NUMBER_BYTES`) before the u
 
 ## Benchmarks
 
-Native, owned-result JSON operations; median **ns/op**, lower is better. One Core Ultra 7 258V / GCC 16.2 / Rust nightly measurement, seven batches per operation, with an independent repeat. These fixtures do not establish a general ranking.
+Native, owned-result JSON operations. Median ns/op, **decode / encode**, lower is better; median of three repeated process passes on one Core Ultra 7 258V. Both GCC and Rust enable native CPU instructions. The expanded corpus includes floats, long strings and reverse-order fields, with safe SIMD `sonic-rs` as a baseline.
 
-| Fixture | goose-json decode | serde_json decode | goose-json encode | serde_json encode |
-| --- | ---: | ---: | ---: | ---: |
-| Small record | 121.7 | 157.7 | 48.9 | 70.6 |
-| Escaped / Unicode | 243.1 | 304.3 | 114.9 | 96.7 |
-| 1,024 integers | 12,422.6 | 13,424.5 | 5,714.1 | 8,228.8 |
+| Fixture | goose-json | sonic-rs | serde_json |
+| --- | ---: | ---: | ---: |
+| Small record | 117.8 / 42.2 | 172.3 / 74.0 | 188.7 / 71.3 |
+| Escaped / Unicode | 244.2 / 104.6 | 306.5 / 147.9 | 315.0 / 95.7 |
+| 1,024 integers | 10,806.0 / 6,311.6 | 17,916.6 / 8,000.2 | 15,570.8 / 8,458.9 |
+| 256 floats | 6,515.2 / 30,555.0 | 7,399.4 / 10,941.8 | 7,425.5 / 10,287.3 |
+| 8 KiB ASCII text | 6,826.2 / 5,348.5 | 1,081.4 / 565.9 | 2,285.4 / 4,718.7 |
+| Dense escapes / Unicode | 37,819.8 / 34,576.8 | 13,574.4 / 8,523.6 | 23,999.5 / 13,981.8 |
+| 16 reversed fields | 843.2 / 195.5 | 958.8 / 424.5 | 1,520.4 / 419.9 |
 
-On this fixture set, decoding takes 28–42% less time than the previous codec. Escaped-string encoding remains slower than `serde_json`; no encoding speedup over the previous codec is claimed. Protobuf is measured separately because its bytes and schema semantics differ.
+The changes improve ASCII text and integer decoding; they do not establish a universal lead. Sonic is faster on long strings, floating-point encoding remains slower, and integer-array encoding regressed in these runs. Full ranges, complete batch data, resource/ownership differences and separate Protobuf/DOM results are [documented](bench/README.md).
 
 ```sh
-make bench                         # Goose; GCC required
-make bench-compare                 # adds optional locked Rust serde_json / prost baselines
+make bench-native
+python3 bench/measure.py --native --cpu 0 --iterations 200000 --runs 3 --output .build/reproduce-01
 ```
 
-See [methodology, hardware, source revisions, Protobuf results, and raw ranges](bench/README.md). CI smoke-runs the benchmarks without timing thresholds.
+See [benchmark setup and methodology](bench/README.md). CI checks execution and correctness, never noisy timing thresholds.
 
 ## Development
 

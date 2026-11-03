@@ -1,0 +1,64 @@
+{
+  "utc": "2026-11-03T23:19:01.225052+00:00",
+  "baseline": "05b81674e101e349ea40a379011418963a7a9794",
+  "source_head": "22f21f0a5097b8abab474c22b494bf9659e39b6d",
+  "goose_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "goose_version": "goose eadca40 (runtime 3025e5810379)",
+  "gcc": "gcc (GCC) 16.2.1 20260810",
+  "rustc": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+  "cargo": "cargo 1.101.0-nightly (29c5daa1a 2026-10-07)",
+  "os": "Linux 7.2.11-arch1-1 x86_64",
+  "cpu": "Intel(R) Core(TM) Ultra 7 258V",
+  "affinity_cpu": 0,
+  "iterations": 200000,
+  "goose_flags": "-O2",
+  "gcc_flags": "-O2 -march=native",
+  "rustflags": "-C target-cpu=native",
+  "rust_profile": {
+    "opt_level": "3",
+    "debuginfo": 0,
+    "debug_assertions": false,
+    "overflow_checks": false,
+    "test": false
+  },
+  "process_order_seed": 219,
+  "runs": [
+    [
+      "before",
+      "after",
+      "compare"
+    ],
+    [
+      "after",
+      "before",
+      "compare"
+    ],
+    [
+      "compare",
+      "before",
+      "after"
+    ]
+  ],
+  "executable_sha256": {
+    "before": "0779a6b9481421dee88c2f2fe9f6aa2c66f551896e3d4c7c6d09063edbf4a217",
+    "after": "9cca46340e12670b4a1bcb7c5c6c26f7108c154cf0e330d0b3b4d661ba41dd18",
+    "compare": "994835cc2058a57ec46dc0564d7bb00750923ac5057cca9eab912a07b3752fb0"
+  },
+  "source_sha256": {
+    "Makefile": "2592664c594f71943ad4b25201ec327209b0dff744fb982c816c78c29decafb4",
+    "bench/bench.goose": "ff6fc06b88f801230832481c5feb42baffda7cf2b84352dc14f0eb0e6ede6125",
+    "bench/compare/Cargo.lock": "934e1be438c6177250e6454f6fdca8ede08a8be289abc53ca692928f70d75269",
+    "bench/compare/Cargo.toml": "bf4b60ef9b44ad13131b0bbd8b7eb3b2913687281cbabc5cd026ad1b783a44dc",
+    "bench/compare/src/main.rs": "b2fde7cc2473e3d9a73fdb74525fbca5c7e340814da7593bcb25a72801622fc9",
+    "bench/fixtures/array.json": "8f4fa9dd6ed780bfe6a4dc14016ee44789accd1a9c8e742e58ca87faa2273571",
+    "bench/fixtures/escaped.json": "103982ffeac127d57795e5f9a4e269870a6f39eb83bb2fabd7980fdc804639b7",
+    "bench/fixtures/floats.json": "6c285e4a6e3864749b79c1a0d78ebb4fdc9ec4eb54d0670605c5ff6347e0d54e",
+    "bench/fixtures/plain.json": "0ec1f9e461cd469397f84305560c48dfd70345602bc618f0cb722a31e32d342b",
+    "bench/fixtures/text-ascii.json": "3e0857689d6b57357908ee1ce4c212e251f0c9312c3734cafe123ca0ef9c9fb8",
+    "bench/fixtures/text-escaped.json": "5d384876e0839db0937e0531e6c952547b2fe7aafdbc7a3cfb46e4b83be0b65d",
+    "bench/fixtures/wide.json": "b9aa8ec3fb793168fba3b1df59d0bf0dab4b22e7b1da024ed3a0138c963d6c85",
+    "bench/measure.py": "abbbb1e95bd9f5399f44a66620611ffd7dc8897c08256f65c9f435a3b0ba519d",
+    "bench/native-cc.sh": "87288e1e034ab2cf5443fafe181a07bd56f8ec1f90eae292ddf16080198a37cd",
+    "json_codec.goose": "c7ab1c2a65c8a9f5e75a021c82e86f773dce719050b6d71810be1c5863dd9daa"
+  }
+}

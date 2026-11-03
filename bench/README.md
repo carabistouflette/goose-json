@@ -1,91 +1,95 @@
 # Benchmarks
 
-Small API microbenchmarks, not a general library ranking. Fixture construction, file I/O and compilation are outside the timed region. Every decode constructs a fresh result; every encode constructs fresh output. Allocation, validation, result consumption, and scope cleanup are inside the timed batches. No buffer-reuse or allocation-count claim is made.
+Owned-result API microbenchmarks with current SIMD competition, not a universal ranking. Results include slower cases. Sources, locked dependencies, complete batch samples, executable hashes, and the environment are published.
 
-## Reproduce
+## Run
 
-From the library root, after `make setup`:
-
-```sh
-make bench                       # native Goose only; requires GCC
-make bench-compare               # also requires Cargo/Rust and downloads locked crates
-make bench-compare BENCH_ITERATIONS=500000
-```
-
-Alternatively pass `GOOSE=/absolute/path/to/goose` to Make. Each operation has up to 1,000 warmup iterations and seven measured batches. Small records use the requested iterations per batch; the array uses one tenth. Output is a Markdown table in nanoseconds per operation, including the minimum, median, maximum, and a checksum. The range describes batch averages, not per-request tail latency. These are warm operation costs, not process startup or memory-footprint measurements. Results must be consumed and errors checked even in release builds. CI runs ten iterations as a correctness smoke check; it never asserts a timing threshold. For less scheduler migration on Linux, use `taskset -c 0 make bench-compare BENCH_ITERATIONS=500000` (choose a CPU allowed on your machine). Make can recompile, but compilation is never timed.
-
-The [shared fixtures](fixtures) are 38-byte plain and 62-byte escaped/Unicode records, plus a 4,022-byte object holding integers 0 through 1023. JSON encoding canonicalizes the escaped record to 54 bytes. The byte column describes the actual input to decoding or output of encoding. These are valid, memory-resident inputs; malformed traffic, wide schemas, other CPUs, and production application behavior are not covered.
-
-## What is compared
-
-- **goose-json:** automatic typed mapping, owned text/arrays, strict missing/duplicate/unknown-field checks, UTF-8 checks, input and number bounds. Goose uses its data-stack memory model; this is not Rust's heap allocator.
-- **serde_json 1.0.154:** [`from_slice`/`to_vec`](https://docs.rs/serde_json/1.0.154/serde_json/), owned `String`/`Vec`, with `deny_unknown_fields`; required and duplicate fields also fail. The schemas and JSON bytes match. Resource policies and ownership machinery differ: this is an end-to-end implementation comparison, not an isolated parser algorithm test. Rust `String` guarantees UTF-8 before serialization; Goose's public byte builder needs validation during serialization.
-- **Goose DOM:** the pinned standard library's borrowing document-tree parser. It does not construct the typed model, copy unescaped text into owned strings, or enforce the schema checks above. It is a reference for a different API, not a like-for-like winner or loser. Only decoding is measured.
-- **prost 0.14.4:** [`Message::decode`/`encode_to_vec`](https://docs.rs/prost/0.14.4/prost/trait.Message.html), using the same logical values as JSON. The wire format is binary Protobuf. Item field numbers are `id=1`, `active=2`, `name=3`; array values are packed repeated `int64`, field 1. Derive annotations are the schema; no `protoc` is required. Protobuf's defaults, field-presence and unknown-field rules differ, and there are fewer bytes to process. These numbers answer “what if I can change formats?”, not “which JSON parser wins?”.
-
-The Rust baseline dependencies and transitive checksums are in [Cargo.lock](compare/Cargo.lock). It uses `black_box` on inputs and results; Goose consumes decoded values and serialized lengths/content, asserts errors, and emits checksums. Matching JSON checksums help detect fixture or result-consumption drift. DOM and Protobuf encoding checksums intentionally differ. The Rust harness asserts full-value JSON and Protobuf round trips before timing; the Goose harness compares every round-trip field/array element and verifies the fixture values before timing, with further correctness coverage in the library tests. Goose interleaves decode/encode/DOM batches; Rust measures each API in sequence. Warmup and ranges reduce, but cannot remove, order and thermal effects.
-
-## Recorded environment
-
-Measured 2026-11-03 UTC on one Intel Core Ultra 7 258V laptop, Linux 7.2.11-arch1-1, x86-64, with every measurement process pinned to CPU 0. No CPU isolation, fixed-frequency control, or turbo/thermal control was applied. Other processes can still run. Values are illustrative and should be rerun on your target machine.
-
-- Goose compiler: `eadca409f68210893f366e60d0c2f0dc29a339be`.
-- Goose build: `goose build bench/bench.goose --cc gcc -O2`; GCC 16.2.1 20260810. Goose `-O2` selects its inlining level; its native driver invokes GCC `-O2`.
-- Rust: `rustc 1.101.0-nightly (822182db4 2026-10-13)`, Cargo's default release profile (`opt-level=3`). No `RUSTFLAGS` override or target-specific tuning was set.
-- Optimized codec source: `f4e6452fc3ec32ef77e1ad64f181434952e398d1`; complete-value-checking harness in `c5c4d9d`.
-- Previous codec baseline: `510db33628f444e86024508564d1ac0530e27a2b`, compiled with the same current Goose harness, compiler and GCC options.
-- Two complete measurement passes; each uses 500,000 iterations per small-record sample and 50,000 per array sample. The summary uses the first complete pass, not the fastest samples or the best pass. The repeat is published separately.
-
-Raw measurements: [before](results/before.md), [after](results/after.md), [external](results/compare.md), and independent repeats [before](results/before-repeat.md), [after](results/after-repeat.md), [external](results/compare-repeat.md).
-
-## Reproduce the previous codec
-
-With an absolute `GOOSE` executable path, run from this checkout:
+From the library root:
 
 ```sh
-baseline=$(mktemp -d)
-mkdir -p "$baseline/bench"
-git show 510db33628f444e86024508564d1ac0530e27a2b:json_codec.goose > "$baseline/json_codec.goose"
-cp bench/bench.goose "$baseline/bench/"
-cp -R bench/fixtures "$baseline/bench/"
-"$GOOSE" build "$baseline/bench/bench.goose" --cc gcc -O2 -o "$baseline/bench-before"
-(cd "$baseline" && taskset -c 0 ./bench-before 500000)
+make setup
+make bench                         # portable GCC build, Goose only
+make bench-compare                 # also serde_json, sonic-rs, and binary Protobuf
+make bench-native                  # native CPU instructions for Goose/GCC AND Rust
+python3 bench/measure.py --native --cpu 0 --iterations 200000 --runs 3 --output .build/reproduce-01
 ```
 
-The retained changes avoid float conversion for integer reads, avoid revalidating raw string/key slices after the input has already passed UTF-8 validation, stop comparing field names after a match, and scan ASCII prefixes eight bytes at a time. Integer overflow and grammar remain checked. Escaped text still receives Unicode validation. The existing 1 MiB input and 128-byte float-token guards remain; the integer path rejects invalid/out-of-range values without arbitrary-precision conversion. Experiments with extra per-digit branching and a word-load UTF-8 helper regressed some cases and were discarded. Timing changes smaller than the published variation should not be treated as improvements.
+Alternatively pass `GOOSE=/absolute/path/to/goose` to Make, or `--goose /absolute/path/to/goose` to the Python runner. Goose setup needs CMake and a C/C++ toolchain; comparisons additionally need Cargo/Rust. The recorder uses only Python's standard library; CPU pinning needs Linux `taskset` and an allowed CPU index. Omit `--cpu` on other systems. Use a fresh output directory: existing data is never overwritten. A full Git clone is needed for the baseline commit, or fetch that commit before measuring.
 
-## Results: first complete pass
+Native builds are intentionally machine-specific. GCC receives `-O2 -march=native`; Rust receives its release profile and `-C target-cpu=native`, as [Sonic recommends](https://github.com/cloudwego/sonic-rs#requirementsnotes). Portable benchmarks omit both native flags. Do not mix their results. The default deployment/toolchain settings are unchanged.
 
-Typed JSON operations, median ns/op (lower is better):
+## Corpus and equivalence
 
-| Fixture | goose-json decode | serde_json decode | goose-json encode | serde_json encode |
-| --- | ---: | ---: | ---: | ---: |
-| Small record | 121.7 | 157.7 | 48.9 | 70.6 |
-| Escaped / Unicode | 243.1 | 304.3 | 114.9 | 96.7 |
-| 1,024 integers | 12,422.6 | 13,424.5 | 5,714.1 | 8,228.8 |
+All implementations read the same [JSON fixtures](fixtures). Fixture construction, file I/O, compilation and full-value round-trip validation happen outside timing. Every timed decode builds a fresh result; every encode creates fresh output. Validation, error checks, allocation, result consumption and scope cleanup are timed. Goose's region/data-stack allocation and Rust's heap allocation differ; no allocation-count or memory-footprint claim is made.
 
-Measured decoding changes relative to the previous codec:
+- `plain`: 38-byte record, i64 id, bool, owned text.
+- `escaped`: 62-byte record with escapes and Unicode; canonical JSON output is 54 bytes.
+- `array`: 1,024 integers 0..1023, 4,022 bytes.
+- `floats`: 256 values `(i - 128) / 8`, 1,581 bytes. These dyadic values round-trip exactly; they are not a difficult-decimal or full-f64-distribution corpus. Boundary/rounding correctness is tested separately.
+- `text-ascii`: an 8 KiB ASCII string in a record, 8,225 bytes total.
+- `text-escaped`: 512 repetitions containing controls, quotes, backslashes and Unicode, 8,737 wire bytes.
+- `wide`: 16 integer fields supplied in reverse declaration order, 135 bytes. This exercises field lookup without an input-order shortcut.
 
-| Fixture | Decode before (ns/op) | Decode after (ns/op) | Time reduction |
+Small records use the requested iterations per sample; integers use one tenth, floats and long text one hundredth, and wide records one fifth (each at least one). Every operation has up to 1,000 warmup iterations and seven timed batches. Checksums prevent unused results, and complete values/array elements are checked before timing. Unsorted per-batch ns/op values are retained in HTML comments beside the visible result tables.
+
+**goose-json** uses strict typed mapping with owned strings/arrays, required/duplicate/unknown-field checks, UTF-8 validation and resource limits. **serde_json 1.0.154** and **sonic-rs 0.5.10** use the same owned Rust structs and `deny_unknown_fields`, with the default safe parsing APIs. serde_json enables `float_roundtrip`; no unchecked parsing is used. JSON resource policies differ, so this compares complete implementations, not identical internal work. Rust `String` establishes UTF-8 before encoding; Goose's mutable byte builder needs checking during encoding. Versions and transitive checksums are locked in [Cargo.lock](compare/Cargo.lock).
+
+**Goose DOM** is borrowing/untyped and does not enforce the typed schema. **prost 0.14.4** uses binary Protobuf with different presence/default/unknown-field rules and byte counts. These are separate API/format choices, not like-for-like JSON competitors. Item tags are id=1, active=2, name=3; numeric arrays use packed field 1 (int64 or double); wide fields use int64 tags 1..16. The Rust annotations are the schema; no protoc is needed.
+
+## Measurement protocol
+
+The recorder builds first, freezes three independent executables (before/after/comparison), then shuffles process order for each pass with seed 219. It selects the actual Cargo-produced executable, isolates native and portable Cargo outputs, hashes all measured binaries and relevant sources, and rejects source changes during compilation or measurement. This prevents a concurrent smoke build from replacing the measured executable. The exact baseline commit defaults to `05b81674e101e349ea40a379011418963a7a9794`; `--baseline` selects another compatible revision. Baseline and candidate use the same current corpus, harness, Goose compiler and native C options.
+
+The summary below is the median of **three process-pass medians**, each based on seven batch averages. All 21 batches are retained; this is not a percentile latency distribution or a confidence interval. Within-process operation order is fixed: Goose interleaves decode/encode/DOM; Rust measures APIs sequentially. Process shuffling, warmup, repeated runs and CPU pinning reduce but do not eliminate scheduling, order, cache and thermal effects. CPU frequency/turbo were not fixed and the core was not isolated from other processes. No universal winner or statistical-significance claim is made. This remains a synthetic corpus, not production-traffic replay.
+
+CI exercises portable comparisons and a native recorder smoke run with tiny counts, without timing thresholds. Production binaries keep portable defaults unless the application explicitly opts into native CPU tuning.
+
+## Recorded native results
+
+Measured 2026-11-04 Europe/Paris; exact UTC start, CPU, kernel, compiler versions, flags, source SHA-256 hashes, process orders, executable hashes and Cargo release profile are in [metadata.json](results/native-2026-11-04/metadata.json). Intel Core Ultra 7 258V, CPU 0; GCC 16.2.1, Rust 1.101.0-nightly, and Goose `eadca409f68210893f366e60d0c2f0dc29a339be`. Requested iterations: 200,000. The measured code is commit `22f21f0`; later regression-test/documentation commits do not alter those measured sources. Re-run on your deployment hardware.
+
+Median ns/op, **decode / encode**, lower is better:
+
+| Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 209.6 | 121.7 | 41.9% |
-| Escaped / Unicode | 337.0 | 243.1 | 27.9% |
-| 1,024 integers | 21,422.6 | 12,422.6 | 42.0% |
+| Small record | 117.8 / 42.2 | 172.3 / 74.0 | 188.7 / 71.3 |
+| Escaped / Unicode | 244.2 / 104.6 | 306.5 / 147.9 | 315.0 / 95.7 |
+| 1,024 integers | 10,806.0 / 6,311.6 | 17,916.6 / 8,000.2 | 15,570.8 / 8,458.9 |
+| 256 floats | 6,515.2 / 30,555.0 | 7,399.4 / 10,941.8 | 7,425.5 / 10,287.3 |
+| 8 KiB ASCII text | 6,826.2 / 5,348.5 | 1,081.4 / 565.9 | 2,285.4 / 4,718.7 |
+| Dense escapes / Unicode | 37,819.8 / 34,576.8 | 13,574.4 / 8,523.6 | 23,999.5 / 13,981.8 |
+| 16 reversed fields | 843.2 / 195.5 | 958.8 / 424.5 | 1,520.4 / 419.9 |
 
-Encoding variation relative to the previous codec overlaps the sample ranges; no encoding speedup is claimed. On these inputs, goose-json decoding is faster than this serde_json build in both recorded passes. This does not cover floating-point arrays, wide records, alternative JSON libraries or architectures. Escaped-string encoding is slower than serde_json, as shown above.
+Measured previous-codec → current-codec times (same native options and expanded harness):
 
-Binary Protobuf, a separate format decision:
+| Fixture | Decode before → after | Encode before → after |
+| --- | ---: | ---: |
+| Small record | 142.6 → 117.8 | 49.3 → 42.2 |
+| Escaped / Unicode | 274.4 → 244.2 | 113.3 → 104.6 |
+| 1,024 integers | 15,268.4 → 10,806.0 | 5,834.4 → 6,311.6 |
+| 256 floats | 8,216.2 → 6,515.2 | 31,750.7 → 30,555.0 |
+| 8 KiB ASCII text | 11,846.6 → 6,826.2 | 12,094.7 → 5,348.5 |
+| Dense escapes / Unicode | 37,906.2 → 37,819.8 | 34,061.0 → 34,576.8 |
+| 16 reversed fields | 863.4 → 843.2 | 190.1 → 195.5 |
 
-| Fixture | JSON input bytes | Protobuf bytes | Protobuf decode (ns/op) | Protobuf encode (ns/op) |
-| --- | ---: | ---: | ---: | ---: |
-| Small record | 38 | 11 | 64.8 | 37.6 |
-| Escaped / Unicode | 62 | 24 | 75.6 | 28.4 |
-| 1,024 integers | 4022 | 1923 | 4,614.2 | 7,158.0 |
+The retained changes combine string classification and escaping, copy raw strings directly into their owners, decode escaped strings directly into owned storage, and inline checked integer reads. Word scans assemble bytes without alignment casts or overreads; `checkfree` makes the compiler verify the scanner's bounds proofs. UTF-8, surrogate, integer overflow, duplicate/missing/unknown-field and size checks remain. Whole-float and shared word-load experiments did not provide a sufficiently consistent broad improvement and were discarded.
 
-Borrowing, untyped standard-library DOM decoding, a separate API decision:
+The gains are workload-specific. Integer-array encoding is slower in this run set despite faster decoding. Dense escaped text has no meaningful gain. Sonic remains substantially ahead on long-string operations, and floating-point encoding remains a major gap. Those are visible engineering targets, not hidden from the summary.
 
-| Fixture | Borrowing DOM decode (ns/op) |
-| --- | ---: |
-| Small record | 120.5 |
-| Escaped / Unicode | 164.6 |
-| 1,024 integers | 23,258.5 |
+Separate binary Protobuf and borrowing DOM results, ns/op:
+
+| Fixture | JSON / Protobuf input bytes | Protobuf decode / encode | Borrowing DOM decode |
+| --- | ---: | ---: | ---: |
+| Small record | 38 / 11 | 61.3 / 42.1 | 122.1 |
+| Escaped / Unicode | 62 / 24 | 74.8 / 34.8 | 169.7 |
+| 1,024 integers | 4022 / 1923 | 4,489.7 / 7,089.0 | 25,438.9 |
+| 256 floats | 1581 / 2051 | 838.8 / 582.0 | 6,697.1 |
+| 8 KiB ASCII text | 8225 / 8199 | 516.1 / 190.6 | 7,213.7 |
+| Dense escapes / Unicode | 8737 / 6663 | 8,473.3 / 158.0 | 14,736.2 |
+| 16 reversed fields | 135 / 31 | 141.2 / 152.1 | 438.7 |
+
+## Raw data and history
+
+The [native result directory](results/native-2026-11-04) contains all nine process outputs plus metadata. Each Markdown output includes all seven samples for every row. Preserve the directory when comparing another run; do not select only the fastest pass.
+
+The [2026-11-03 methodology and measurements](results/2026-11-03-methodology.md) cover the older three-fixture, portable/default-CPU experiment. Its serde_json build did not enable float_roundtrip, and it had no Sonic baseline. Those historical measurements are not mixed into the native table above.
