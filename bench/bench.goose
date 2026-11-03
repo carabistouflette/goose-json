@@ -11,6 +11,24 @@ let SAMPLES = 7;
 fn consume(value: Item&) -> i64 { value.id + value.name.bytes.len + (if value.active { 1 } else { 0 }) }
 fn consume(value: Numbers&) -> i64 { value.values.len + value.values[0] + value.values[value.values.len - 1] }
 
+fn equal(a: Item&, b: Item&) -> bool {
+    a.id == b.id && a.active == b.active && a.name.bytes[..] == b.name.bytes[..]
+}
+fn equal(a: Numbers&, b: Numbers&) -> bool {
+    if a.values.len != b.values.len { return false; }
+    for i in a.values.len { if a.values[i] != b.values[i] { return false; } }
+    return true;
+}
+fn validate_fixture(name: u8[:], value: Item&) {
+    assert(value.id == 42 && value.active);
+    if name == "plain" { assert(value.name.bytes == "Goose"); }
+    else { assert(value.name.bytes == "Goose\n\"東京\"😀"); }
+}
+fn validate_fixture(name: u8[:], value: Numbers&) {
+    assert(value.values.len == 1024);
+    for i in value.values.len { assert(value.values[i] == i); }
+}
+
 fn decode_batch<T>(text: u8[:], count: i64) -> i64 {
     var checksum = 0;
     for i in count {
@@ -63,10 +81,11 @@ fn benchmark<T>(name: u8[:], count: i64) {
     assert(read_file(str("bench/fixtures/", name, ".json"), input));
     var value, error = json_codec::deserialize<T>(input);
     assert(error.len == 0);
+    validate_fixture(name, value);
     let encoded, encode_error = json_codec::serialize(value);
     assert(encode_error.len == 0);
     var roundtrip, roundtrip_error = json_codec::deserialize<T>(encoded);
-    assert(roundtrip_error.len == 0 && consume(roundtrip) == consume(value));
+    assert(roundtrip_error.len == 0 && equal(roundtrip, value));
     let warmup = min(count, 1000);
     var decode_checksum = decode_batch<T>(input, warmup);
     var encode_checksum = encode_batch(value, warmup);
