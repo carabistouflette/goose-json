@@ -144,5 +144,33 @@ fn main() {
     assert(!json_codec::valid_utf8([0xf4, 0x90, 0x80, 0x80]));
     assert(!json_codec::valid_utf8([0xe2, 0x82]));
     assert(!json_codec::finite(1.0 / 0.0));
+    // The ASCII word path must handle UTF-8 and invalid bytes at every alignment.
+    for offset in 16 {
+        var aligned: u8[>..] = [];
+        for i in offset { aligned.push('a'); }
+        aligned.append("é😀abcdefghijklmnop");
+        assert(json_codec::valid_utf8(aligned));
+        var bad_aligned: u8[>..] = [];
+        for i in offset { bad_aligned.push('a'); }
+        bad_aligned.append([0xed, 0xa0, 0x80]);
+        bad_aligned.append("abcdefghijklmnop");
+        assert(!json_codec::valid_utf8(bad_aligned));
+    }
+    // Integer fast path: exact boundaries, signs, grammar and owned API calls.
+    let boundaries: i64[7] = [-9223372036854775808, -9223372036854775807, -1, 0, 1, 9223372036854775806, 9223372036854775807];
+    for expected in boundaries {
+        var actual: i64 = 0;
+        assert(json_codec::deserialize_into(str(expected), actual).len == 0 && actual == expected);
+    }
+    for i in 10000 {
+        let expected = (i * 2654435761) % 1000000000000 - 500000000000;
+        var actual: i64 = 0;
+        assert(json_codec::deserialize_into(str(" ", expected, "\t"), actual).len == 0 && actual == expected);
+    }
+    let invalid_integers: const u8[:][16] = ["", "-", "+1", "00", "-01", "1.0", "1e0", "1E0", "--1", "1-1", "1+1", "1 2", "9223372036854775808", "-9223372036854775809", "18446744073709551615", "-18446744073709551616"];
+    for input in invalid_integers {
+        var actual: i64 = 0;
+        assert(json_codec::deserialize_into(input, actual).len > 0);
+    }
     print("codec tests passed");
 }

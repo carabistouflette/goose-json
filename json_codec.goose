@@ -30,13 +30,41 @@ fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
 fn read(r: json::Reader&, value: Text&) {
     var scratch: u8[>..] = [];
     let s = json::read_string(r, scratch);
-    if !valid_utf8(s) { json::fail(r, "invalid Unicode string"); return; }
+    // Raw slices were validated by deserialize_into; decoded escapes need a check.
+    if scratch.len > 0 && !valid_utf8(s) { json::fail(r, "invalid Unicode string"); return; }
     value.bytes.clear();
     value.bytes.append(s);
 }
+// Parse integers without routing through the standard reader's float conversion.
+// Accumulating negatively permits -2^63 without an overflowing intermediate.
 fn read(r: json::Reader&, value: i64&) {
-    if !number_allowed(r) { return; }
-    value = json::read_int(r);
+    r.pos = json::skip_space(r.text, r.pos);
+    var pos = r.pos;
+    var negative = false;
+    if pos < r.text.len && r.text[pos] == '-' { negative = true; pos++; }
+    let start = pos;
+    if pos + 1 < r.text.len && r.text[pos] == '0' && r.text[pos + 1] >= '0' && r.text[pos + 1] <= '9' {
+        json::fail(r, "expected an integer"); return;
+    }
+    let last_digit = if negative { 8 } else { 7 };
+    var number: i64 = 0;
+    while pos < r.text.len {
+        let c = r.text[pos];
+        if c < '0' || c > '9' { break; }
+        let digit = (c - '0') as i64;
+        if number < -922337203685477580 || (number == -922337203685477580 && digit > last_digit) {
+            json::fail(r, "integer outside i64 range"); return;
+        }
+        number = number * 10 - digit;
+        pos++;
+    }
+    if pos == start {
+        json::fail(r, "expected an integer"); return;
+    }
+    // The enclosing container (or finish) validates the delimiter, so a
+    // fraction/exponent suffix still makes the complete read fail.
+    value = if negative { number } else { -number };
+    r.pos = pos;
 }
 fn read(r: json::Reader&, value: bool&) { value = json::read_bool(r); }
 fn read(r: json::Reader&, value: f64&) {
@@ -57,13 +85,13 @@ fn read<T>(r: json::Reader&, value: T&) {
         loop {
             var scratch: u8[>..] = [];
             let key = json::read_string(r, scratch);
-            if !valid_utf8(key) { json::fail(r, "invalid Unicode key"); return; }
+            if scratch.len > 0 && !valid_utf8(key) { json::fail(r, "invalid Unicode key"); return; }
             if json::peek(r) != ':' { json::fail(r, "expected ':'"); return; }
             r.pos++;
             var found = false;
             var index = 0;
             const for <N, A> in fields<T> {
-                if key == N {
+                if !found && key == N {
                     if seen[index] { json::fail(r, "duplicate field"); return; }
                     seen[index] = true;
                     read(r, value.A);
@@ -155,6 +183,10 @@ fn finite(value: f64) -> bool {
 // Reject overlong encodings, surrogates, truncation, and > U+10FFFF.
 fn valid_utf8(text: u8[:]) -> bool {
     var i = 0;
+    // Scan an ASCII prefix in safe eight-byte chunks, then use the scalar
+    // validator for the remainder. No word casts or alignment assumptions.
+    while text.len - i >= 8 && (text[i] | text[i + 1] | text[i + 2] | text[i + 3] |
+            text[i + 4] | text[i + 5] | text[i + 6] | text[i + 7]) < 0x80 { i += 8; }
     while i < text.len {
         let c = text[i];
         i++;
