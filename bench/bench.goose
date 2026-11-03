@@ -6,10 +6,36 @@ import os;
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 struct Numbers { values: i64[>..] }
+struct Floats { values: f64[>..] }
+struct Wide { f00: i64, f01: i64, f02: i64, f03: i64, f04: i64, f05: i64, f06: i64, f07: i64, f08: i64, f09: i64, f10: i64, f11: i64, f12: i64, f13: i64, f14: i64, f15: i64 }
 let SAMPLES = 7;
 
 fn consume(value: Item&) -> i64 { value.id + value.name.bytes.len + (if value.active { 1 } else { 0 }) }
 fn consume(value: Numbers&) -> i64 { value.values.len + value.values[0] + value.values[value.values.len - 1] }
+
+fn consume(value: Floats&) -> i64 { value.values.len + ((value.values[0] + value.values[value.values.len - 1]) * 8.0) as! i64 }
+fn consume(value: Wide&) -> i64 {
+    var sum: i64 = 0;
+    const for <N, A> in fields<Wide> { sum += value.A; }
+    return sum;
+}
+fn equal(a: Floats&, b: Floats&) -> bool {
+    if a.values.len != b.values.len { return false; }
+    for i in a.values.len { if a.values[i] != b.values[i] { return false; } }
+    return true;
+}
+fn equal(a: Wide&, b: Wide&) -> bool {
+    const for <N, A> in fields<Wide> { if a.A != b.A { return false; } }
+    return true;
+}
+fn validate_fixture(name: u8[:], value: Floats&) {
+    assert(value.values.len == 256);
+    for i in value.values.len { assert(value.values[i] == (i - 128) / 8.0); }
+}
+fn validate_fixture(name: u8[:], value: Wide&) {
+    var i = 0;
+    const for <N, A> in fields<Wide> { assert(value.A == i); i++; }
+}
 
 fn equal(a: Item&, b: Item&) -> bool {
     a.id == b.id && a.active == b.active && a.name.bytes[..] == b.name.bytes[..]
@@ -22,7 +48,13 @@ fn equal(a: Numbers&, b: Numbers&) -> bool {
 fn validate_fixture(name: u8[:], value: Item&) {
     assert(value.id == 42 && value.active);
     if name == "plain" { assert(value.name.bytes == "Goose"); }
-    else { assert(value.name.bytes == "Goose\n\"東京\"😀"); }
+    else if name == "escaped" { assert(value.name.bytes == "Goose\n\"東京\"😀"); }
+    else {
+        var expected: u8[>..] = [];
+        if name == "text-ascii" { for i in 1024 { expected.append("abcdefgh"); } }
+        else { for i in 512 { expected.append("abc\n\"\\\té😀"); } }
+        assert(value.name.bytes[..] == expected[..]);
+    }
 }
 fn validate_fixture(name: u8[:], value: Numbers&) {
     assert(value.values.len == 1024);
@@ -63,6 +95,13 @@ fn dom_batch(text: u8[:], count: i64) -> i64 {
 }
 
 fn report(implementation: u8[:], name: u8[:], operation: u8[:], bytes: i64, count: i64, times: f64[:], checksum: i64) {
+    var samples = str("<!-- samples | ", implementation, " | ", name, " | ", operation, " | ");
+    for t, i in times {
+        if i > 0 { samples.append(","); }
+        format_flt(samples, t, 3);
+    }
+    samples.append(" -->");
+    print(samples);
     for i in times.len {
         for j in i + 1..times.len {
             if times[j] < times[i] { let t = times[i]; times[i] = times[j]; times[j] = t; }
@@ -123,4 +162,8 @@ fn main() {
     benchmark<Item>("plain", count);
     benchmark<Item>("escaped", count);
     benchmark<Numbers>("array", max(1, count / 10));
+    benchmark<Floats>("floats", max(1, count / 100));
+    benchmark<Item>("text-ascii", max(1, count / 100));
+    benchmark<Item>("text-escaped", max(1, count / 100));
+    benchmark<Wide>("wide", max(1, count / 5));
 }

@@ -1,4 +1,5 @@
 BENCH_ITERATIONS ?= 100000
+BENCH_CC ?= gcc
 
 GOOSE ?= .toolchain/goose/build/goose
 
@@ -23,8 +24,12 @@ format:
 .PHONY: bench bench-build bench-compare
 bench-build:
 	mkdir -p .build
-	$(GOOSE) build bench/bench.goose --cc gcc -O2 -o .build/bench
+	$(GOOSE) build bench/bench.goose --cc $(BENCH_CC) -O2 -o .build/bench
 bench: bench-build
 	./.build/bench $(BENCH_ITERATIONS)
 bench-compare: bench
 	cargo run --locked --release --manifest-path bench/compare/Cargo.toml -- $(BENCH_ITERATIONS)
+
+.PHONY: bench-native
+bench-native:
+	RUSTFLAGS="-C target-cpu=native" $(MAKE) bench-compare BENCH_CC="$(abspath bench/native-cc.sh)"

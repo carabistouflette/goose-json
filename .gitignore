@@ -2,3 +2,5 @@
 .build/
 
 bench/compare/target/
+
+__pycache__/
