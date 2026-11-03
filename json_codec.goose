@@ -6,8 +6,9 @@ import json;
 // Owned UTF-8 text; unlike a slice, it outlives the JSON input.
 struct Text { bytes: u8[>..] }
 let MAX_INPUT_BYTES = 1048576;
+let MAX_NUMBER_BYTES = 128;
 
-// Only struct roots are accepted. All fields are required, including fields
+// This convenience constructor accepts struct roots. All fields are required, including fields
 // with Goose defaults. On failure the returned value is partial: discard it.
 fn deserialize<T>(text: u8[:]) -> T, u8[>..] {
     var value = T { .. };
@@ -33,9 +34,13 @@ fn read(r: json::Reader&, value: Text&) {
     value.bytes.clear();
     value.bytes.append(s);
 }
-fn read(r: json::Reader&, value: i64&) { value = json::read_int(r); }
+fn read(r: json::Reader&, value: i64&) {
+    if !number_allowed(r) { return; }
+    value = json::read_int(r);
+}
 fn read(r: json::Reader&, value: bool&) { value = json::read_bool(r); }
 fn read(r: json::Reader&, value: f64&) {
+    if !number_allowed(r) { return; }
     value = json::read_number(r);
     if !finite(value) { json::fail(r, "number outside finite f64 range"); }
 }
@@ -123,6 +128,24 @@ fn read(r: json::Reader&, value: bool[>..]&) {
 fn read(r: json::Reader&, value: f64[>..]&) {
     value.clear();
     json::each_element(r) { read(r, value.push(0.0)); };
+}
+
+// Bound work BEFORE entering the upstream arbitrary-precision number scanner.
+// Its exponent saturation is also safe within this bound: a mantissa of at
+// most 128 bytes cannot compensate an exponent saturated at 100000.
+fn number_allowed(r: json::Reader&) -> bool {
+    json::peek(r);
+    var end = r.pos;
+    while end < r.text.len {
+        let c = r.text[end];
+        if !((c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E') { break; }
+        end++;
+        if end - r.pos > MAX_NUMBER_BYTES {
+            json::fail(r, "number token exceeds 128 bytes");
+            return false;
+        }
+    }
+    return true;
 }
 
 fn finite(value: f64) -> bool {

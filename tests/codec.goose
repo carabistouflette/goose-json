@@ -77,6 +77,33 @@ fn main() {
     let array_error = json_codec::deserialize_into("{\"point\":{\"x\":0,\"y\":0},\"numbers\":[1,],\"flags\":[],\"scores\":[]}", array_data);
     assert(array_error.len > 0);
 
+    // Regressions: bound numeric work before the standard reader, which
+    // otherwise mishandles saturated exponents and has quadratic conversion.
+    var huge_number = str("{\"value\":1.");
+    for i in 499999 { huge_number.push('0'); }
+    huge_number.append("1}");
+    let huge_value, huge_error = json_codec::deserialize<Float>(huge_number);
+    assert(huge_error.len > 0);
+    var compensated = str("{\"value\":0.");
+    for i in 999999 { compensated.push('0'); }
+    compensated.append("1e1000000}");
+    let compensated_value, compensated_error = json_codec::deserialize<Float>(compensated);
+    assert(compensated_error.len > 0);
+    let underflow, underflow_error = json_codec::deserialize<Float>("{\"value\":1e-9999}");
+    assert(underflow_error.len == 0 && underflow.value == 0.0);
+    var boundary = str("{\"value\":1.");
+    for i in 126 { boundary.push('0'); }
+    boundary.push('}');
+    let at_limit, at_error = json_codec::deserialize<Float>(boundary);
+    assert(at_error.len == 0 && at_limit.value == 1.0);
+    boundary.pop(); boundary.append("0}");
+    let over_limit, over_error = json_codec::deserialize<Float>(boundary);
+    assert(over_error.len > 0);
+    var integer:      i64     = 0;
+    var long_integer: u8[>..] = [];
+    for i in 100000 { long_integer.push('9'); }
+    assert(json_codec::deserialize_into(long_integer, integer).len > 0);
+
     // Results own their strings: a temporary source can die before use.
     fn owned() -> Item {
         var source = str("{\"id\":7,\"active\":false,\"name\":\"owned\"}");
