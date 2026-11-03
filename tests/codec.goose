@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import json_codec from "..";
 import std;
+import json;
 struct Item { id: i64, active: bool, name: json_codec::Text }
 struct Point { x: i64, y: i64 }
 root struct Data { point: Point, numbers: i64[>..], flags: bool[>..], scores: f64[>..] }
@@ -155,6 +156,39 @@ fn main() {
         bad_aligned.append([0xed, 0xa0, 0x80]);
         bad_aligned.append("abcdefghijklmnop");
         assert(!json_codec::valid_utf8(bad_aligned));
+    }
+    // Differential-check the word scan against a scalar reference at each
+    // byte alignment, including controls, quotes, backslashes and high bytes.
+    for offset in 40 {
+        for byte in 256 {
+            var input: u8[>..] = [];
+            for i in offset { input.push('a'); }
+            input.push(byte as! u8);
+            input.append("abcdefghijklmnopqrstuvwxyz0123456789");
+            let end, ascii = json_codec::plain_prefix(input, 0);
+            var expected = 0;
+            var expected_ascii = true;
+            for c in input {
+                if c < 0x20 || c == '"' || c == '\\' { break; }
+                if c >= 0x80 { expected_ascii = false; }
+                expected++;
+            }
+            assert(end == expected && ascii == expected_ascii);
+        }
+    }
+    // The fused writer must preserve standard JSON escaping byte-for-byte.
+    for byte in 128 {
+        var value = json_codec::Text { bytes: [] };
+        value.bytes.append("abcdefghijklmnopqrstuvwxyz0123456789");
+        value.bytes.push(byte as! u8);
+        value.bytes.append("é😀\n\"\\");
+        var expected: u8[>..] = [];
+        json::format_string(expected, value.bytes);
+        let actual, error = json_codec::serialize(value);
+        assert(error.len == 0 && actual[..] == expected[..]);
+        var decoded = json_codec::Text { bytes: [] };
+        assert(json_codec::deserialize_into(actual, decoded).len == 0);
+        assert(decoded.bytes[..] == value.bytes[..]);
     }
     // Integer fast path: exact boundaries, signs, grammar and owned API calls.
     let boundaries: i64[7] = [-9223372036854775808, -9223372036854775807, -1, 0, 1, 9223372036854775806, 9223372036854775807];

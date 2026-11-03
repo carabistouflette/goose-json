@@ -28,16 +28,26 @@ fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
 }
 
 fn read(r: json::Reader&, value: Text&) {
-    var scratch: u8[>..] = [];
-    let s = json::read_string(r, scratch);
-    // Raw slices were validated by deserialize_into; decoded escapes need a check.
-    if scratch.len > 0 && !valid_utf8(s) { json::fail(r, "invalid Unicode string"); return; }
+    // The entry point already validated UTF-8. A raw string can be copied
+    // directly; escaped strings still use the standard Unicode decoder.
+    if json::peek(r) == '"' {
+        let end, ascii = plain_prefix(r.text, r.pos + 1);
+        if end < r.text.len && r.text[end] == '"' {
+            value.bytes.clear();
+            value.bytes.append(r.text[r.pos + 1..end]);
+            r.pos = end + 1;
+            return;
+        }
+    }
+    // Decode escapes straight into the owner, avoiding scratch storage and a copy.
     value.bytes.clear();
-    value.bytes.append(s);
+    let s = json::read_string(r, value.bytes);
+    if value.bytes.len == 0 { value.bytes.append(s); }
+    else if !valid_utf8(value.bytes) { json::fail(r, "invalid Unicode string"); }
 }
 // Parse integers without routing through the standard reader's float conversion.
 // Accumulating negatively permits -2^63 without an overflowing intermediate.
-fn read(r: json::Reader&, value: i64&) {
+inline fn read(r: json::Reader&, value: i64&) {
     r.pos = json::skip_space(r.text, r.pos);
     var pos = r.pos;
     var negative = false;
@@ -120,9 +130,47 @@ fn serialize<T>(value: T&) -> u8[>..], u8[>..] {
     return out, [];
 }
 fn write(out: u8[>..]&, value: Text&) -> bool {
-    if !valid_utf8(value.bytes) { return false; }
-    json::format_string(out, value.bytes);
+    let end, ascii = plain_prefix(value.bytes, 0);
+    // The prefix scan proves ASCII safe. Unicode needs the full validator;
+    // bytes after the first escape must be checked even if the prefix is ASCII.
+    if !valid_utf8(if ascii { value.bytes[end..] } else { value.bytes[..] }) { return false; }
+    out.push('"');
+    out.append(value.bytes[..end]);
+    if end < value.bytes.len { json::format_escaped(out, value.bytes[end..]); }
+    out.push('"');
     return true;
+}
+
+// Whether a word contains a zero byte. Unsigned subtraction wraps by design.
+checkfree fn has_zero(word: u64) -> bool {
+    ((word - 0x0101010101010101) & ~word & 0x8080808080808080) != 0
+}
+
+// Find a run without JSON escapes, including raw Unicode. Bytewise assembly
+// permits unaligned input without casts, overreads, or target-specific code.
+checkfree fn plain_prefix(text: u8[:], at: i64) -> i64, bool {
+    assert(at >= 0 && at <= text.len);
+    var end = at;
+    var high: u64 = 0;
+    if text.len - end >= 32 {
+        while end < text.len - 7 {
+            let word = text[end] | (text[end + 1] as u64 << 8) |
+                (text[end + 2] as u64 << 16) | (text[end + 3] as u64 << 24) |
+                (text[end + 4] as u64 << 32) | (text[end + 5] as u64 << 40) |
+                (text[end + 6] as u64 << 48) | (text[end + 7] as u64 << 56);
+            let controls = (word - 0x2020202020202020) & ~word & 0x8080808080808080;
+            if controls != 0 || has_zero(word ^ 0x2222222222222222) || has_zero(word ^ 0x5c5c5c5c5c5c5c5c) { break; }
+            high |= word;
+            end += 8;
+        }
+    }
+    while end < text.len {
+        let c = text[end];
+        if c < 0x20 || c == '"' || c == '\\' { break; }
+        high |= c;
+        end++;
+    }
+    return end, (high & 0x8080808080808080) == 0;
 }
 fn write(out: u8[>..]&, value: i64&) -> bool { json::format_int(out, value); return true; }
 fn write(out: u8[>..]&, value: bool&) -> bool { json::format_bool(out, value); return true; }
@@ -185,7 +233,7 @@ fn valid_utf8(text: u8[:]) -> bool {
     var i = 0;
     // Scan an ASCII prefix in safe eight-byte chunks, then use the scalar
     // validator for the remainder. No word casts or alignment assumptions.
-    while text.len - i >= 8 && (text[i] | text[i + 1] | text[i + 2] | text[i + 3] |
+    while i < text.len - 7 && (text[i] | text[i + 1] | text[i + 2] | text[i + 3] |
             text[i + 4] | text[i + 5] | text[i + 6] | text[i + 7]) < 0x80 { i += 8; }
     while i < text.len {
         let c = text[i];
