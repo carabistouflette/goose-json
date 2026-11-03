@@ -16,8 +16,8 @@ fn deserialize<T>(text: u8[:]) -> T, u8[>..] {
     return value, error;
 }
 
-// Also accepts root structs. The caller supplies a fresh, empty destination;
-// failed reads may modify it. This is useful for independently growing fields.
+// Also accepts root structs and supported scalar/array destinations. Encountered
+// strings and arrays replace existing contents; failure may leave partial changes.
 fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
     if text.len > MAX_INPUT_BYTES { return str("json_codec: input exceeds 1 MiB"); }
     if !valid_utf8(text) { return str("json_codec: invalid UTF-8"); }
