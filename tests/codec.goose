@@ -176,6 +176,20 @@ fn main() {
             assert(end == expected && ascii == expected_ascii);
         }
     }
+    // Nonzero starts, adjacent special/high bytes, and every short tail.
+    var mixed: u8[>..] = [];
+    for i in 3 { mixed.append("a\0\"\\\n é😀abcdefghijklmnopqrstuvwxyz"); }
+    for at in mixed.len + 1 {
+        let end, ascii = json_codec::plain_prefix(mixed, at);
+        var expected = at;
+        var expected_ascii = true;
+        for c in mixed[at..] {
+            if c < 0x20 || c == '"' || c == '\\' { break; }
+            if c >= 0x80 { expected_ascii = false; }
+            expected++;
+        }
+        assert(end == expected && ascii == expected_ascii);
+    }
     // The fused writer must preserve standard JSON escaping byte-for-byte.
     for byte in 128 {
         var value = json_codec::Text { bytes: [] };
