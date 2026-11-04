@@ -119,6 +119,7 @@ def main():
     if any(output.iterdir()):
         parser.error("--output must be empty (preserve previous measurements)")
     run(["python3", "scripts/native-manifest.py", "--check"])
+    run(["python3", "bench/fixtures.py", "--check"])
     hashes = source_hashes(output)
     cc = str(ROOT / "bench/native-cc.sh") if args.native else "gcc"
     # An explicit profile avoids inheriting undisclosed Rust code-generation flags.
