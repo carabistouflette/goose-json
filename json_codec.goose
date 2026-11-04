@@ -483,7 +483,11 @@ fn owned_general(x: f64, out: u8[:]) -> i64, i64 {
     while p >= 1e15 && s > -22 { s--; p = if s >= 0 { x * float_text::POW10[s] } else { x / float_text::POW10[-s] }; }
     if p >= 1e14 && p < 1e15 {
         var n = (p + 0.5) as! u64;
-        if n == 1000000000000000 { n = 100000000000000; s--; }
+        if n == 1000000000000000 {
+            // A carry at the lower scaling bound would index POW10[23].
+            if s == -22 { return runtime_digits(x, out); }
+            n = 100000000000000; s--;
+        }
         let back = if s >= 0 { n / float_text::POW10[s] } else { n * float_text::POW10[-s] };
         if back == x {
             json::put_digits(out[..15], n);

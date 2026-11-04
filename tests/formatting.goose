@@ -61,6 +61,15 @@ fn test_numbers() {
     var precise = 1.0000000000000002;
     let precise_text, precise_error = json_codec::serialize(precise);
     assert(precise_error.len == 0 && precise_text == "1.0000000000000002");
+    // A 15-digit carry must fall back before its scaling index leaves POW10.
+    for number in [9.999999999999998e36, -9.999999999999998e36] {
+        var value = number;
+        let carry_text, carry_error = json_codec::serialize(value);
+        assert(carry_error.len == 0 && carry_text == (if value < 0 { "-9.999999999999998e36" } else { "9.999999999999998e36" }));
+        var decoded: f64 = 0.0;
+        assert(json_codec::deserialize_into(carry_text, decoded).len == 0);
+        assert(float_text::bits_of(decoded) == float_text::bits_of(value));
+    }
     var flag = true;
     let flag_text, flag_error = json_codec::serialize(flag);
     assert(flag_error.len == 0 && flag_text == "true");
