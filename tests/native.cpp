@@ -92,7 +92,7 @@ static void strings() {
                 text.replace(offset, 1, "\n\"\\\té😀");
             assert(gj_quote_prefix(span(text)) >= 0);
             std::string encoded;
-            for (int cap : {6, 7, 16, 31, 32, 33, 64, 4096}) {
+            for (int cap : {6, 7, 16, 31, 32, 33, 64, 191, 192, 193, 4096}) {
                 std::vector<uint8_t> out(cap + 2, 0xa5);
                 std::string result;
                 int64_t at = 0;
@@ -123,6 +123,18 @@ static void strings() {
                 assert(decoded == text && at == (int64_t)wire.size());
             }
         }
+    // A 32-byte block needs exactly 192 output bytes in the worst case.
+    std::string controls(32, '\0');
+    assert(gj_quote_prefix(span(controls)) == 0);
+    for (int cap : {191, 192, 193}) {
+        std::vector<uint8_t> out(cap + 1, 0xa5);
+        int64_t position = 0;
+        const auto n = gj_escape_chunk(span(controls), 0, {out.data(), cap}, &position);
+        assert(n == (cap < 192 ? 186 : 192) && position == n / 6);
+        assert(out.back() == 0xa5);
+        for (int64_t i = 0; i < n; ++i)
+            assert(out[i] == "\\u0000"[i % 6]);
+    }
     for (const char *bad :
          {"\\q\"", "\\uD800\"", "\\uDC00\"", "\\uD800\\u0000\"", "abc", "\\", "\n\""}) {
         std::string wire(bad);

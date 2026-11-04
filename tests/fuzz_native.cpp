@@ -68,7 +68,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         require(prefix == plain_end(input, 0));
         std::string encoded;
         int64_t at = 0;
-        const int64_t capacity = cap + 6;
+        static const int64_t capacities[] = {6,   7,   15,  16,  17,   31,   32,  33,
+                                             63,  64,  65,  127, 128,  129,  191, 192,
+                                             193, 255, 256, 257, 4095, 4096, 4097};
+        const size_t choice = size > 3 ? data[3] : 0;
+        const int64_t capacity = capacities[choice % (sizeof capacities / sizeof *capacities)];
         std::vector<uint8_t> buffer(capacity);
         while (at < input.len) {
             const auto before = at;
@@ -109,7 +113,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         auto n =
             gj_parse_float_chunk(input, at, {reinterpret_cast<double *>(numbers.data() + 1), count},
                                  &position, &done, continuation);
-        require(n < 0 || (n <= count && position >= at && position <= input.len));
+        require(n < 0 || (n <= count && position > at && position <= input.len && (n > 0 || done)));
         if (n >= 0) {
             // Only compare consumed bytes: a full chunk can stop at a numeric
             // prefix whose following delimiter is checked by its caller.
