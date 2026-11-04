@@ -120,3 +120,29 @@ contracts and verified the object hashes. Targeted Clang ASan/UBSan Unicode and
 chunk differentials passed 2,365,704 cases per SSE2 and portable-kernel build,
 covering UTF-16 code units, surrogate boundaries, malformed escapes, capacities,
 prefix lengths, guard bytes and byte-aligned references.
+
+## Benchmark release-profile audit
+
+The recorder at `0c26308570cbe2c6769c1bf0eba8d86e7e8ad681` retained inherited
+`CARGO_PROFILE_RELEASE_OPT_LEVEL=0`. A tiny offline Cargo project confirmed that
+this produced an unoptimized release executable despite a manifest requesting
+optimization 3. This was a measurement-configuration defect; the codec was not
+changed during this audit.
+
+The recorder now clears inherited profile overrides, supplies an explicit
+top-level release configuration, forces `CARGO_INCREMENTAL=0`, and checks the
+observed executable profile before timing. Requested settings and observed Cargo
+fields are distinct metadata. Unit regressions cover environment isolation,
+artifact selection and rejected optimization/debug/assertion/overflow/test
+profiles. A complete native recorder smoke run passed with conflicting release
+environment settings. Separate offline probes verified conflicting manifest
+settings are overridden, an actual unoptimized artifact is rejected, and
+incremental environment/configuration overrides do not reach the compiler.
+
+The independent GPT-6.1 Sol ultra review found no blocker in the runner/tests
+diff. It checked portable/native/cached artifacts and real JSON from tiny offline
+Cargo projects, including Cargo 1.74, 1.99 and 1.101 nightly. The review identified
+the separate incremental switch; that small hardening was added and verified
+afterward. This does not sandbox compiler wrappers or every package-specific
+Cargo setting. No new timing comparison or library ranking follows from these
+smoke tests. Previously recorded data and immutable releases are unchanged.

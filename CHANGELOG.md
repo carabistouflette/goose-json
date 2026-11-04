@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Prevent inherited Cargo release/incremental settings from silently changing
+  benchmark comparisons; record the requested profile and reject incompatible
+  observed executable profiles before timing.
 - Split the public tests into ten named groups, preserving their checks and
   execution order; remove a redundant numeric cast.
 - Clarify private native contracts and simplify Unicode escape control flow.

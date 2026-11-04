@@ -19,6 +19,15 @@ Alternatively pass `GOOSE=/absolute/path/to/goose` to Make, or `--goose /absolut
 
 Native builds are intentionally machine-specific. Generated Goose C receives `-O2 -march=native`; the CMake C++ kernels receive Release flags `-O3 -DNDEBUG -march=native` through the sibling `bench/g++` wrapper. Rust receives its release profile (`opt-level=3`, no LTO) and `-C target-cpu=native`, as [Sonic recommends](https://github.com/cloudwego/sonic-rs#requirementsnotes). Portable benchmarks omit both native flags. Do not mix their results. Native CPU tuning is restricted to this benchmark profile. Default deployment builds use the same checked native backend without `-march=native`; TinyCC uses the Goose fallback. All modes still require the CMake/C++ build dependency described in [native/README.md](../native/README.md).
 
+Use the Python recorder for controlled comparisons. It supplies the top-level
+Rust release settings explicitly: optimization 3, no debug information/assertions,
+no overflow checks/LTO/incremental compilation, 16 codegen units, unwinding panics
+and no stripping. It clears inherited `CARGO_PROFILE_*` settings and forces
+`CARGO_INCREMENTAL=0`. Requested settings and Cargo's observed executable profile
+are recorded separately; an incompatible observed profile stops the run before
+timing. Compiler wrappers and package-specific Cargo configuration remain part of
+the trusted toolchain. The simple Make benchmark targets use the caller's environment.
+
 ## Corpus and equivalence
 
 All implementations read the same [JSON fixtures](fixtures). Fixture construction, file I/O, compilation and full-value round-trip validation happen outside timing. Every timed decode builds a fresh result; every encode creates fresh output. Validation, error checks, allocation, result consumption and scope cleanup are timed. Goose's region/data-stack allocation and Rust's heap allocation differ; no allocation-count or memory-footprint claim is made.
@@ -42,7 +51,7 @@ Small records and `text-short` use the requested iterations per sample; integers
 
 ## Measurement protocol
 
-The recorder clears inherited C/C++ flags and custom toolchain/stdlib overrides, uses a fresh Goose build cache shared by candidate and baseline for that recording, builds first, freezes three independent executables (before/after/comparison), then shuffles process order for each pass with seed 219. It selects the actual Cargo-produced executable, isolates native and portable Cargo outputs, hashes all measured binaries, Goose/Rust sources, native sources/headers/vendors, CMake, the package sidecar, fingerprint script and compiler wrappers, and rejects source changes during compilation or measurement. This prevents a concurrent smoke build from replacing the measured executable. The exact baseline commit defaults to `05b81674e101e349ea40a379011418963a7a9794`; `--baseline` selects another compatible revision. The published final run explicitly selects previous codec `ce1f8066fd18de466cc78800202452b7d0fcd9c0`. Baseline and candidate use the same current corpus, harness, Goose compiler and native C options. Both candidate and baseline use the native backend; exact flags and source hashes are recorded.
+The recorder clears inherited C/C++ flags, Cargo profile overrides and custom toolchain/stdlib overrides, uses a fresh Goose build cache shared by candidate and baseline for that recording, builds first, freezes three independent executables (before/after/comparison), then shuffles process order for each pass with seed 219. It selects and checks the actual Cargo-produced executable, isolates native and portable Cargo outputs, hashes all measured binaries, Goose/Rust sources, native sources/headers/vendors, CMake, the package sidecar, fingerprint script and compiler wrappers, and rejects source changes during compilation or measurement. This prevents a concurrent smoke build from replacing the measured executable. The exact baseline commit defaults to `05b81674e101e349ea40a379011418963a7a9794`; `--baseline` selects another compatible revision. The published final run explicitly selects previous codec `ce1f8066fd18de466cc78800202452b7d0fcd9c0`. Baseline and candidate use the same current corpus, harness, Goose compiler and native C options. Both candidate and baseline use the native backend; exact flags and source hashes are recorded.
 
 The summary below is the median of **three process-pass medians**, each based on seven batch averages. All 21 batches are retained; this is not a percentile latency distribution or a confidence interval. Within-process operation order is fixed: Goose interleaves decode/encode/DOM; Rust measures APIs sequentially. Process shuffling, warmup, repeated runs and CPU pinning reduce but do not eliminate scheduling, order, cache and thermal effects. CPU frequency/turbo were not fixed and the core was not isolated from other processes. No universal winner or statistical-significance claim is made. This remains a synthetic corpus, not production-traffic replay.
 
@@ -67,6 +76,12 @@ A later Unicode-decoder cleanup and native contract comments produced
 byte-identical native objects with GCC and Clang in default and native Release
 profiles; see the [maintainability checks](../docs/validation.md#maintainability-cleanup).
 The timings here still refer to the measured commit above.
+
+The later recorder profile audit fixed inherited Cargo settings that could
+silently change future comparison builds. All six historical recordings with
+Cargo profile metadata report optimization 3 with assertions/overflow checks off.
+Earlier records do not contain the new full requested-profile field; they remain
+unchanged historical measurements, not reruns under the newer recorder.
 
 The previous SQLite matched series completed before this CPU 2 window began.
 Sibling owners agreed to keep new heavy jobs off CPU 2; other-core validation
