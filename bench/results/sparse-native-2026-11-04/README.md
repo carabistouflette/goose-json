@@ -118,4 +118,3 @@ like-for-like typed JSON implementations. Their semantics are described above.
 | 8 KiB ASCII text | 8225 / 8199 | 543.4 / 183.6 | 7,052.6 |
 | Dense escapes / Unicode | 8737 / 6663 | 8,260.5 / 157.9 | 14,302.7 |
 | 16 reversed fields | 135 / 31 | 133.8 / 144.0 | 425.9 |
-
