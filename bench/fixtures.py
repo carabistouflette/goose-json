@@ -43,10 +43,10 @@ def main():
         path = ROOT / f'{name}.json'
         data = json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n'
         if args.check:
-            if not path.exists() or path.read_text() != data:
+            if not path.exists() or path.read_text(encoding="utf-8") != data:
                 parser.exit(1, f'{path.name} is stale; run python3 bench/fixtures.py\n')
         else:
-            path.write_text(data)
+            path.write_text(data, encoding="utf-8")
 
 
 if __name__ == '__main__':

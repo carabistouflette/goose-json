@@ -99,7 +99,7 @@ fn wide_integer(i: usize) -> i64 {
 }
 impl Consume for Mixed {
     fn consume(&self) -> i64 {
-        self.event_id % 1024
+        self.event_id.rem_euclid(1024)
             + self.context.region
             + self.context.label.len() as i64
             + self.counters.len() as i64
@@ -246,7 +246,9 @@ impl Consume for Numbers {
         }
     }
     fn consume(&self) -> i64 {
-        self.values.len() as i64 + self.values[0] % 1024 + self.values[self.values.len() - 1] % 1024
+        self.values.len() as i64
+            + self.values[0].rem_euclid(1024)
+            + self.values[self.values.len() - 1].rem_euclid(1024)
     }
 }
 fn measure(mut operation: impl FnMut(usize) -> i64, count: usize) -> ([f64; 7], i64) {
