@@ -10,7 +10,7 @@ struct definition; decoded strings and arrays own their storage.
 Save this as `main.goose` and run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@f6409122724d371e679ccd5cc27ea842097f895b";
+import json_codec from "carabistouflette/goose-json@6fad097cef35c0623b45e96e84246de6b0a64a70";
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 
@@ -35,6 +35,7 @@ Output:
 compiler with its runtime. These build dependencies also apply to `goose run`.
 Tested on Linux x86-64 with GCC and Clang; other platforms are unverified.
 The API is experimental; the example pins a published commit.
+See the [changelog](CHANGELOG.md) for release notes.
 
 ## Supported types
 
@@ -59,9 +60,9 @@ scalars and arrays, use `deserialize_into(input, destination)`.
 
 ## Performance
 
-The latest matched run reduced 8 KiB ASCII encoding time by about 22% compared
-with the previous codec. Results vary by workload: sparse-text handling and some
-encoding cases remain faster in the compared libraries.
+The latest matched run reduced sparse-text decoding time by about 54%
+and encoding time by about 51% compared with the previous codec. Results vary by
+workload; some cases remain faster in the compared libraries.
 
 Times below are **microseconds per operation**, lower is better. These are
 medians from three process passes on a Core Ultra 7 258V with native CPU tuning.
@@ -72,16 +73,16 @@ They describe this corpus and machine; close timings can overlap.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.115 | 0.170 | 0.162 |
-| Escaped / Unicode | 0.214 | 0.315 | 0.302 |
-| 1,024 integers | 9.595 | 17.182 | 14.827 |
-| 256 simple floats | 4.955 | 7.199 | 7.135 |
-| 256 wide-exponent floats | 8.659 | 15.915 | 22.187 |
-| 64-byte ASCII text | 0.116 | 0.189 | 0.175 |
-| 8 KiB sparse escapes | 2.389 | 1.584 | 2.764 |
-| 8 KiB ASCII text | 0.859 | 1.065 | 2.184 |
-| Dense escapes / Unicode | 13.222 | 13.078 | 22.557 |
-| 16 reversed fields | 0.794 | 0.920 | 1.501 |
+| Small record | 0.116 | 0.176 | 0.159 |
+| Escaped / Unicode | 0.214 | 0.301 | 0.313 |
+| 1,024 integers | 9.274 | 16.875 | 14.618 |
+| 256 simple floats | 4.480 | 7.114 | 7.054 |
+| 256 wide-exponent floats | 8.252 | 15.545 | 22.115 |
+| 64-byte ASCII text | 0.113 | 0.197 | 0.181 |
+| 8 KiB sparse escapes | 1.076 | 1.575 | 2.784 |
+| 8 KiB ASCII text | 0.848 | 1.096 | 2.200 |
+| Dense escapes / Unicode | 12.634 | 12.931 | 23.584 |
+| 16 reversed fields | 0.765 | 0.949 | 1.484 |
 
 </details>
 
@@ -90,16 +91,16 @@ They describe this corpus and machine; close timings can overlap.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.044 | 0.072 | 0.070 |
-| Escaped / Unicode | 0.103 | 0.155 | 0.092 |
-| 1,024 integers | 5.888 | 7.963 | 7.879 |
-| 256 simple floats | 10.587 | 10.065 | 10.051 |
-| 256 wide-exponent floats | 11.007 | 9.628 | 8.927 |
-| 64-byte ASCII text | 0.043 | 0.133 | 0.127 |
-| 8 KiB sparse escapes | 1.995 | 0.635 | 4.808 |
-| 8 KiB ASCII text | 0.502 | 0.542 | 4.517 |
-| Dense escapes / Unicode | 9.803 | 8.411 | 12.290 |
-| 16 reversed fields | 0.193 | 0.401 | 0.404 |
+| Small record | 0.043 | 0.075 | 0.073 |
+| Escaped / Unicode | 0.097 | 0.143 | 0.092 |
+| 1,024 integers | 5.392 | 7.794 | 7.813 |
+| 256 simple floats | 9.452 | 10.275 | 9.722 |
+| 256 wide-exponent floats | 10.551 | 10.207 | 9.572 |
+| 64-byte ASCII text | 0.043 | 0.135 | 0.129 |
+| 8 KiB sparse escapes | 0.951 | 0.634 | 4.811 |
+| 8 KiB ASCII text | 0.492 | 0.537 | 4.581 |
+| Dense escapes / Unicode | 9.671 | 8.368 | 12.099 |
+| 16 reversed fields | 0.183 | 0.403 | 0.404 |
 
 </details>
 

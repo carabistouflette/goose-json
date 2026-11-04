@@ -1,0 +1,140 @@
+{
+  "utc": "2026-11-04T10:32:48.322116+00:00",
+  "baseline": "ce1f8066fd18de466cc78800202452b7d0fcd9c0",
+  "source_head": "6fad097cef35c0623b45e96e84246de6b0a64a70",
+  "goose_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "goose_version": "goose eadca40 (runtime 3025e5810379)",
+  "g++": "g++ (GCC) 16.2.1 20260810",
+  "native_cxx_flags": "-O3 -DNDEBUG -march=native",
+  "gcc": "gcc (GCC) 16.2.1 20260810",
+  "rustc": "rustc 1.101.0-nightly (822182db4 2026-10-13)",
+  "cargo": "cargo 1.101.0-nightly (29c5daa1a 2026-10-07)",
+  "os": "Linux 7.2.11-arch1-1 x86_64",
+  "cpu": "Intel(R) Core(TM) Ultra 7 258V",
+  "affinity_cpu": 2,
+  "iterations": 200000,
+  "goose_flags": "-O2",
+  "gcc_flags": "-O2 -march=native",
+  "rustflags": "-C target-cpu=native",
+  "rust_profile": {
+    "opt_level": "3",
+    "debuginfo": 0,
+    "debug_assertions": false,
+    "overflow_checks": false,
+    "test": false
+  },
+  "goose_cache": "isolated per recording",
+  "inherited_c_cpp_flags": false,
+  "process_order_seed": 219,
+  "runs": [
+    [
+      "before",
+      "after",
+      "compare"
+    ],
+    [
+      "after",
+      "before",
+      "compare"
+    ],
+    [
+      "compare",
+      "before",
+      "after"
+    ]
+  ],
+  "process_timings": [
+    {
+      "file": "run-1-before.md",
+      "wall_seconds": 8.909838128951378,
+      "child_cpu_seconds": 8.89
+    },
+    {
+      "file": "run-1-after.md",
+      "wall_seconds": 9.50390392204281,
+      "child_cpu_seconds": 9.280000000000001
+    },
+    {
+      "file": "run-1-compare.md",
+      "wall_seconds": 16.07634438300738,
+      "child_cpu_seconds": 15.299999999999999
+    },
+    {
+      "file": "run-2-after.md",
+      "wall_seconds": 11.234556743002031,
+      "child_cpu_seconds": 11.199999999999996
+    },
+    {
+      "file": "run-2-before.md",
+      "wall_seconds": 9.074412385001779,
+      "child_cpu_seconds": 9.02000000000001
+    },
+    {
+      "file": "run-2-compare.md",
+      "wall_seconds": 14.88333393400535,
+      "child_cpu_seconds": 14.829999999999993
+    },
+    {
+      "file": "run-3-compare.md",
+      "wall_seconds": 14.97426121099852,
+      "child_cpu_seconds": 14.920000000000002
+    },
+    {
+      "file": "run-3-before.md",
+      "wall_seconds": 9.407317681005225,
+      "child_cpu_seconds": 9.370000000000005
+    },
+    {
+      "file": "run-3-after.md",
+      "wall_seconds": 8.518896625027992,
+      "child_cpu_seconds": 8.489999999999995
+    }
+  ],
+  "executable_sha256": {
+    "before": "4a0b2dc651e4ae8bd512ff06b3387509352cd94e430c4c14c1643fac00efc1db",
+    "after": "19930874e3b115f4b3894afc9a4e73ccbefa5169276c575d202178e87c003628",
+    "compare": "bfde13530b6efc5dff6db756090b6dcaa4a38b2824485f7e70fadd489e49b86f"
+  },
+  "source_sha256": {
+    "CMakeLists.txt": "eeb521088d12b64be56bebf88812e3aaf83d8b1127ac069fc4e0a7866f0ef69d",
+    "Makefile": "2a04fcb011ff8e0fdbbe0f6cbdffbbbe2fbc5ba6ad94b0f3c99e94f0dc16e68e",
+    "bench/bench.goose": "633c0bd5fa26fbf525cd7d0d9d647f4934c85bdad3fe246dbce5642d73b224dd",
+    "bench/compare/Cargo.lock": "934e1be438c6177250e6454f6fdca8ede08a8be289abc53ca692928f70d75269",
+    "bench/compare/Cargo.toml": "bf4b60ef9b44ad13131b0bbd8b7eb3b2913687281cbabc5cd026ad1b783a44dc",
+    "bench/compare/src/main.rs": "94aceccc919522a078cb385d95642aef0718ee506aeb9dcd541af62c0ba42d71",
+    "bench/fixtures/array.json": "8f4fa9dd6ed780bfe6a4dc14016ee44789accd1a9c8e742e58ca87faa2273571",
+    "bench/fixtures/escaped.json": "103982ffeac127d57795e5f9a4e269870a6f39eb83bb2fabd7980fdc804639b7",
+    "bench/fixtures/floats-wide.json": "e7322cc17bd886c193d337722e210e0ad29ff5ac5efc24eedc581b309aff2c65",
+    "bench/fixtures/floats.json": "6c285e4a6e3864749b79c1a0d78ebb4fdc9ec4eb54d0670605c5ff6347e0d54e",
+    "bench/fixtures/plain.json": "0ec1f9e461cd469397f84305560c48dfd70345602bc618f0cb722a31e32d342b",
+    "bench/fixtures/text-ascii.json": "3e0857689d6b57357908ee1ce4c212e251f0c9312c3734cafe123ca0ef9c9fb8",
+    "bench/fixtures/text-escaped.json": "5d384876e0839db0937e0531e6c952547b2fe7aafdbc7a3cfb46e4b83be0b65d",
+    "bench/fixtures/text-short.json": "c1479f267f0fe8883c48cc937e54b33e2cab1eec27c9bab918dda8dcae901a90",
+    "bench/fixtures/text-sparse.json": "6c782c3a04984e4837408f903e250cb7a087f887e78eb5a29c26940357aad299",
+    "bench/fixtures/wide.json": "b9aa8ec3fb793168fba3b1df59d0bf0dab4b22e7b1da024ed3a0138c963d6c85",
+    "bench/g++": "267750a41aa27b2f13540bdc3cf98c7ea9858e819573d24f8c7548a582d5f451",
+    "bench/measure.py": "d223ef36bdb9d888476e237c999b5395c9f7428ae4c3d6a4135ffc9b8ce76360",
+    "bench/native-cc.sh": "87288e1e034ab2cf5443fafe181a07bd56f8ec1f90eae292ddf16080198a37cd",
+    "json_codec.build": "1651ceae5de8e8dab43f2cd4983207184a9b575030b7761feee5d28e649e4994",
+    "json_codec.goose": "fcd765e9e4cd0d4339babf6563947c9456b45c73e7085147b34c14f42f3d0711",
+    "native/README.md": "da1af52aff3d28eb8b0e1b7d6991c95c61eb990febb37a318e9618380f7d05ce",
+    "native/accelerated.cpp": "41192ab8d79eb1fd7af354e199f248710bcd4eb4a15d2ea71a98e2bb1e04acae",
+    "native/api.h": "0eb3207a04e44d681ce04b4359c3f0d450aefa5eab871818e436d2c84bac13a6",
+    "native/codec.h": "38b339a0243d1f8faa3d9d9eadd8e456cbc849dc7bb5508b7d7a6d08e36f861d",
+    "native/select.h": "869f9e8f305c36bbc97391f142601c6e579595fbd4f019ec384b6e7f2a81e5d6",
+    "native/vendor/dragonbox/LICENSE-Apache2-LLVM": "9e45e856bedccee9f67254082ca11851d954de2fed7448c4bed19ad9aab99a91",
+    "native/vendor/dragonbox/LICENSE-Boost": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+    "native/vendor/dragonbox/dragonbox.h": "5480d282648ba168b13cd4b78bd928e992ea5a45b4ce17c45c06781025178509",
+    "native/vendor/dragonbox/dragonbox_to_chars.cpp": "e7c91f2de26b50ae920ea9981e70d0aa00d27f09cac84a5bb3309b0ff83e2590",
+    "native/vendor/dragonbox/dragonbox_to_chars.h": "4f1b5b908f725a755436c0d3fc22a49544c7405ab3cf50e181215f891f8333a9",
+    "native/vendor/fast_float/LICENSE-APACHE": "097a889aa954d04e088b790b10a4014d6189561d0a6013935a73ce3d4ddaaf06",
+    "native/vendor/fast_float/LICENSE-BOOST": "8d8291caf1cee26d23acf3eb67c9f9a2d58f1c681b16a4fbe8cbfb9e3c0b5a9b",
+    "native/vendor/fast_float/LICENSE-MIT": "e562f3f974ced7e69dd1db77b820b36bcf8f30377f1aa105723fba449c53c4e6",
+    "native/vendor/fast_float/fast_float.h": "2a8d07368d7d7280741db8de9dbdc69ea3c2955afbcdd54b8165e67fea02cc04",
+    "native/vendor/simdutf/LICENSE-APACHE": "3d34610fc6b5e1b0bfe4e2f36171c2d62c28ef05cb8d704f5a0073be41a43b3d",
+    "native/vendor/simdutf/LICENSE-MIT": "fc8dbc04e03ad4efc08a647ffe7f995b811a95bc04c0e85a56d5277c6593fa5f",
+    "native/vendor/simdutf/simdutf.cpp": "9ddb4c3f6ee11b2aa354d7bb294469cedf9368b6f10354016536b536f004516b",
+    "native/vendor/simdutf/simdutf.h": "299a5bca86b45f9b05ebe5e48899deedbeb822c6e4b7eecccdf77beeaa474356",
+    "scripts/native-manifest.py": "033ac691198254ec849130077f7bb38153c55903da19556dde234db67c127cf3"
+  }
+}

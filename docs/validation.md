@@ -1,7 +1,7 @@
 # Validation record
 
 Recorded 2026-11-04 for the native codec measured at
-`f6409122724d371e679ccd5cc27ea842097f895b`. Subsequent documentation and test
+`6fad097cef35c0623b45e96e84246de6b0a64a70`. Subsequent documentation and test
 changes preserve the measured production source hashes. This record describes
 checks performed, not a security certification or a guarantee on other systems.
 
@@ -14,17 +14,22 @@ checks performed, not a security certification or a guarantee on other systems.
   patterns per run, guard pages, exact/undersized buffers, and byte-aligned ABI
   references and float arrays.
 - The production CMake library passed one million libFuzzer cases each with
-  default SSE2, native AVX2, and scalar scanner branches. After expanding escape
-  capacity coverage, another 100,000 cases passed in each mode. The seed is 219;
+  default SSE2, native AVX2, and scalar scanner branches. The seed is 219;
   corpus mutation and coverage can differ between compiler versions and runs.
 - Independent GPT-6.1 Sol reviews at ultra reasoning checked the fuzz harness
   and optimized native kernels. Findings about successful array-format coverage,
   exact scanner positions and full-block escape capacities were addressed.
-  The final review found no confirmed production blocker in its scope.
-- That final review independently exercised all three scanner variants under
-  ASan/UBSan, with scalar scanner/escape oracles, guarded buffers, float round
-  trips and exact capacity checks. It also verified that ordinary Release builds
-  do not enable sanitizer or fuzz instrumentation.
+  The subsequent sparse-run/decimal-helper review also found no confirmed
+  production blocker in its scope.
+- The sparse-run review independently exercised all three scanner variants under
+  ASan/UBSan. Each passed 278,538 exact string comparisons against the preceding
+  codec and independent scalar oracles, 931,264 float/capacity checks and 40,000
+  packed-array comparisons. Guarded buffers, partial error writes, chunk
+  positions, signed zero and exact float spelling were checked. Additional
+  maintained million-pattern tests and the previous guarded oracle also passed.
+- Production source fingerprint for that review:
+  `fa77dfc961568613cc6a6b0cfa20cd7644f5e27e502ae46b6c55afb03ac3994d`.
+  Ordinary Release builds keep sanitizer and fuzz instrumentation disabled.
 
 The public suite and native harness are checked into this repository. Reproduce
 the maintained checks with the compiler pinned in [GOOSE_REVISION](../GOOSE_REVISION):
