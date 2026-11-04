@@ -39,8 +39,20 @@ bench-compare: bench
 bench-native:
 	RUSTFLAGS="-C target-cpu=native" $(MAKE) bench-compare BENCH_CC="$(abspath bench/native-cc.sh)"
 
-.PHONY: test-native
+.PHONY: test-native fuzz-native
+NATIVE_BUILD = .build/native-$(notdir $(CXX))
+FUZZ_CXX ?= clang++
+FUZZ_RUNS ?= 10000
+FUZZ_FLAGS ?=
 test-native:
-	mkdir -p .build
-	$(CXX) -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer tests/native.cpp native/accelerated.cpp native/vendor/simdutf/simdutf.cpp native/vendor/dragonbox/dragonbox_to_chars.cpp -DJKJ_NAMESPACE=goose_json_dragonbox -Inative/vendor -Inative/vendor/simdutf -o .build/native-sanitize
-	UBSAN_OPTIONS=halt_on_error=1 ./.build/native-sanitize
+	cmake -S . -B "$(NATIVE_BUILD)" -DCMAKE_BUILD_TYPE=Debug -DGOOSE_JSON_NATIVE_TESTS=ON -DCMAKE_CXX_COMPILER="$(CXX)"
+	cmake --build "$(NATIVE_BUILD)" --target goose_json_native_test --parallel 2
+	UBSAN_OPTIONS=halt_on_error=1 "$(NATIVE_BUILD)/goose_json_native_test"
+fuzz-native:
+	cmake -S . -B .build/fuzz -DCMAKE_BUILD_TYPE=Debug -DGOOSE_JSON_FUZZ=ON -DCMAKE_CXX_COMPILER="$(FUZZ_CXX)" -DCMAKE_CXX_FLAGS="$(FUZZ_FLAGS)"
+	cmake --build .build/fuzz --target goose_json_fuzz --parallel 2
+	mkdir -p .build/fuzz-corpus .build/fuzz-artifacts
+	cp bench/fixtures/*.json .build/fuzz-corpus/
+	printf '%s' 'ABCDEFGH' > .build/fuzz-corpus/float-format-success
+	printf '%s' ',1.25,-0.0]' > .build/fuzz-corpus/array-continuation
+	UBSAN_OPTIONS=halt_on_error=1 ./.build/fuzz/goose_json_fuzz .build/fuzz-corpus -artifact_prefix=.build/fuzz-artifacts/ -dict=tests/fuzz.dict -seed=219 -max_len=16384 -runs=$(FUZZ_RUNS)

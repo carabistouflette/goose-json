@@ -19,5 +19,7 @@ jobs:
       - run: make check test
       - run: make test-native CXX=clang++
       - run: make test-native CXX=g++
+      - run: make fuzz-native FUZZ_RUNS=10000
+      - run: make fuzz-native FUZZ_FLAGS=-march=native FUZZ_RUNS=10000
       - run: make bench-compare BENCH_ITERATIONS=10
       - run: python3 bench/measure.py --native --iterations 10 --runs 1 --output .build/native-smoke

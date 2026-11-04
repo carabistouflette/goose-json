@@ -21,6 +21,29 @@ Run `make format` after changing this directory or CMakeLists.txt. It refreshes
 `json_codec.build` with a source fingerprint, invalidating Goose's local native
 package cache. `make check` and benchmark builds reject a stale fingerprint.
 
+## Testing
+
+Standalone tests and the fuzzer link this same CMake library target, with
+ASan/UBSan instrumentation enabled only for these opt-in developer builds:
+
+```sh
+make test-native CXX=clang++
+make test-native CXX=g++
+make fuzz-native FUZZ_RUNS=1000000
+make fuzz-native FUZZ_FLAGS=-march=native FUZZ_RUNS=1000000
+```
+
+The Clang libFuzzer harness checks output bounds, chunk progress, UTF-8 escaping
+round-trips, finite float bit round-trips against `strtod`, and byte-aligned float
+arrays. Seeds come from the benchmark fixtures and a JSON/Unicode dictionary.
+Inputs are capped at 16 KiB per fuzz case; the public API's larger resource limits
+are covered separately by `tests/codec.goose`. CI runs bounded fuzz campaigns on
+every push. Local findings are saved under `.build/fuzz-artifacts/`.
+
+The default build enables SSE2 scans on x86-64; `-march=native` also exercises
+AVX2 where available. To exercise scalar scanner branches on x86-64, run with
+`FUZZ_FLAGS="-U__SSE2__ -U__AVX2__"`. This does not emulate another architecture.
+
 ## Vendored dependencies
 
 The following source files are unmodified. Their notices and upstream
