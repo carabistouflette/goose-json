@@ -253,6 +253,21 @@ fn main() {
     var underflow_values: f64[>..] = [];
     assert(json_codec::deserialize_into("[1.25,-1e-9999,2.5]", underflow_values).len == 0);
     assert(underflow_values.len == 3 && float_text::bits_of(underflow_values[1]) == float_text::bits_of(-0.0));
+    // An uncommon conversion after completed batches must restart the array
+    // without retaining previously appended native values.
+    for count in [64, 65, 128, 129] {
+        var input = str("[");
+        for i in count { input.append(str(i + 1, ",")); }
+        input.append("-1e-9999,2.5]");
+        var values: f64[>..] = [];
+        assert(json_codec::deserialize_into(input, values).len == 0);
+        assert(values.len == count + 2);
+        for i in count { assert(values[i] == (i + 1) as f64); }
+        assert(float_text::bits_of(values[count]) == float_text::bits_of(-0.0));
+        assert(values[count + 1] == 2.5);
+        input.pop(); input.append(",]");
+        assert(json_codec::deserialize_into(input, values).len > 0);
+    }
     // Escapes and surrogate pairs straddle native block/output boundaries.
     for offset in 96 {
         var value = json_codec::Text { bytes: [] };
