@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Fix portable serialization of finite floats near a 15-digit carry boundary
+  (including both signs of 9.999999999999998e36). Fall back before a scaling
+  carry can index beyond the power table; preserve canonical output and bits.
+
 ## 0.1.1
 
 - Make parsing/serialization errors and numeric output independent of application
