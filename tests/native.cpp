@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../native/api.h"
+#include "../native/integer.h"
 #include <cassert>
+#include <charconv>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -218,7 +220,62 @@ static void guard_pages() {
 #endif
 }
 
+static void check_integer(int64_t value, bool thorough) {
+    char expected[32];
+    auto result = std::to_chars(expected, expected + sizeof expected, value);
+    assert(result.ec == std::errc());
+    auto length = result.ptr - expected;
+    for (int offset = 0; offset < (thorough ? 16 : 1); ++offset) {
+        uint8_t out[64];
+        memset(out, 0xa5, sizeof out);
+        auto count = gj_integer_i64(value, out + offset, 20);
+        assert(count == length && !memcmp(out + offset, expected, count));
+        for (int i = 0; i < offset; ++i)
+            assert(out[i] == 0xa5);
+        for (int i = offset + count; i < 64; ++i)
+            assert(out[i] == 0xa5);
+        if (thorough)
+            for (int cap = -1; cap < 20; ++cap) {
+                memset(out, 0xa5, sizeof out);
+                assert(gj_integer_i64(value, out + offset, cap) == -1);
+                for (uint8_t byte : out)
+                    assert(byte == 0xa5);
+            }
+    }
+}
+static void integers() {
+    check_integer(0, true);
+    check_integer(INT64_MIN, true);
+    check_integer(INT64_MAX, true);
+    for (int64_t power = 1;; power *= 10) {
+        for (int delta = -1; delta <= 1; ++delta) {
+            check_integer(power + delta, true);
+            check_integer(-(power + delta), true);
+        }
+        if (power == INT64_C(1000000000000000000))
+            break;
+    }
+    uint64_t state = 219;
+    for (int i = 0; i < 1000000; ++i) {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        int64_t value;
+        memcpy(&value, &state, sizeof value);
+        check_integer(value, false);
+    }
+#if defined(__unix__)
+    long page = sysconf(_SC_PAGESIZE);
+    assert(page > 20);
+    auto *mem = (uint8_t *)mmap(nullptr, page * 3, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    assert(mem != MAP_FAILED && mprotect(mem + page, page, PROT_READ | PROT_WRITE) == 0);
+    assert(gj_integer_i64(INT64_MIN, mem + page * 2 - 20, 20) == 20);
+    assert(gj_integer_i64(INT64_MIN, mem + page * 2, 19) == -1);
+    assert(munmap(mem, page * 3) == 0);
+#endif
+}
 int main() {
+    integers();
     for (double value :
          {0.0, -0.0, 1.0, -1.0, 1e-5, 1e-6, 1e15, 1e16, std::numeric_limits<double>::denorm_min(),
           std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), double(INFINITY),
@@ -255,5 +312,5 @@ int main() {
     numbers();
     strings();
     guard_pages();
-    puts("native kernels: 1,000,000 float patterns, string boundaries and guard pages passed");
+    puts("native kernels: 1,000,000 integer and float patterns, string boundaries and guard pages passed");
 }

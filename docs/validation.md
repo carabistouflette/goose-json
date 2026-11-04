@@ -267,3 +267,41 @@ signed zeros, i64 limits, hostile hooks and offsets through byte 1,048,575.
 Generated/runtime C passed standalone portable ASan/UBSan. The reviewer separately
 reproduced the baseline abort and verified canonical spelling and exact bits
 for both repaired inputs. No unchanged native fuzz/SIMD audit was repeated.
+
+## Wide-integer conversion candidate
+
+The GCC/Clang integer adapter uses a private header-only decimal kernel with
+eight-digit blocks and mostly 32-bit tail arithmetic. The kernel requires
+twenty output bytes; the existing Goose adapter still rejects slices shorter
+than `GS_FMT_MAX` before writing. Signed magnitudes use unsigned subtraction,
+including i64.min. TinyCC/other compilers retain the pinned runtime formatter.
+The public API and canonical integer spelling are preserved.
+
+The public normal/debug runner and compiled suites, debug portable mode and
+standalone runtime linkage pass. Both GCC and Clang native ASan/UBSan suites
+pass a million integer patterns against `std::to_chars`, decimal-boundary
+neighbors, sixteen destination offsets, undersized buffers and guard pages.
+The maintained public hostile-hook suite checks eight-/sixteen-digit block
+boundaries and the signed extrema. A separate Python oracle matches 70,016
+integer output lines in TinyCC release/debug, GCC native, Clang debug portable
+and Clang ASan/UBSan builds, including public roundtrips.
+
+An independent Sol 6.1 ultra review found no standards, correctness or KISS
+blockers. GCC/Clang C11 and C++17 probes, Clang ASan/UBSan, one million random
+integers plus one million small integers against `snprintf`, exact/short/null
+spans, alignment/canary checks and guard pages passed. Independent public tests
+covered TinyCC normal/debug, GCC native, Clang debug and GCC forced-portable
+debug/standalone, plus exact diagnostics at byte 10,000 and 1,048,575 and extreme
+float spellings. No unchanged SIMD/floating fuzz audit was repeated.
+
+The [matched full-API recording](../bench/results/wide-integers-native-2026-11-04)
+compares measured source `06622d495175842914f7381b72fd6d855733acc3` with fixed
+`v0.1.2`. All thirteen fixtures, nine process outputs and 3,276 batch averages
+are retained. Wide-integer encoding decreased in each of the three passes;
+the aggregate median decreased 43.8%, versus 16.5% for signed small integers.
+Sparse-text encoding was 0.1% slower in aggregate. Decoder/float/string kernels
+were unchanged; their timing differences are not attributed to this optimization.
+The third pass suffered substantial scheduling contention (Goose child CPU/wall
+about 50%, Rust 68%). No samples were discarded or corrected. Review and heavy
+correctness validation finished before timing, but the shared core had no
+exclusive reservation or fixed frequency. No universal ranking is claimed.

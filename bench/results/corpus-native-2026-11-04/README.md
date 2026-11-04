@@ -7,7 +7,7 @@ identical. This establishes controls for the broader corpus, not a speedup claim
 All nine process outputs and all 3,276 batch averages are retained under
 [recording](recording), with complete source/executable hashes, requested/observed
 build profiles, process order, timing and passed typed-decode checksum checks.
-[Full results and contracts](../../README.md#recorded-native-results).
+[Historical full results](report.md); [API contracts](../../README.md#corpus-and-equivalence).
 
 From a full checkout at the measured harness source, with the pinned compiler:
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Convert wide signed integers using bounded eight-digit blocks on GCC/Clang;
+  preserve canonical output, the existing adapter capacity contract and runtime
+  fallback on TinyCC/other compilers.
+- Check integer bytes, decimal boundaries, short spans, unaligned destinations
+  and guard pages against independent standard-library conversion.
+
 ## 0.1.2
 
 - Fix portable serialization of finite floats near a 15-digit carry boundary
