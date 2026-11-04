@@ -10,7 +10,7 @@ struct definition; decoded strings and arrays own their storage.
 Save this as `main.goose` and run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@6fad097cef35c0623b45e96e84246de6b0a64a70";
+import json_codec from "carabistouflette/goose-json@ca9b0dce42061c38e72d05233ee229874dc5b682";
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 

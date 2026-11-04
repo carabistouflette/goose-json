@@ -195,3 +195,9 @@ tables use every pass. This shared host had no core reservation or fixed
 frequency; observed slower cases are reported alongside improvements. No
 universal performance ranking or security certification follows. Earlier
 exploratory scratch/in-place variants were not substituted into this recording.
+
+Publication checks also passed from a standalone public clone using the pinned
+compiler: manifest verification, the example, and the standalone debug portable
+consumer suite. The README's exact remote-import example was extracted to a new
+project with a fresh package cache. It fetched immutable source `ca9b0dc` and
+produced the documented JSON output. The quickstart now pins that reviewed fix.
