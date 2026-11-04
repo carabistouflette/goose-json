@@ -409,12 +409,14 @@ fn write(out: u8[>..]&, value: f64[>..]&) -> bool {
 }
 
 inline fn owned_int(out: u8[>..]&, value: i64) {
-    // Keep common nonnegative integers in Goose, without a runtime call/copy.
-    if value >= 0 && value < 10000 {
-        if value >= 1000 { out.push(('0' + value / 1000) as! u8); }
-        if value >= 100 { out.push(('0' + value / 100 % 10) as! u8); }
-        if value >= 10 { out.push(('0' + value / 10 % 10) as! u8); }
-        out.push(('0' + value % 10) as! u8);
+    // Bound the signed range before negation, keeping i64.min on the runtime path.
+    if value > -10000 && value < 10000 {
+        var magnitude = value;
+        if magnitude < 0 { out.push('-'); magnitude = -magnitude; }
+        if magnitude >= 1000 { out.push(('0' + magnitude / 1000) as! u8); }
+        if magnitude >= 100 { out.push(('0' + magnitude / 100 % 10) as! u8); }
+        if magnitude >= 10 { out.push(('0' + magnitude / 10 % 10) as! u8); }
+        out.push(('0' + magnitude % 10) as! u8);
         return;
     }
     var text: u8[32] = [0; 32];

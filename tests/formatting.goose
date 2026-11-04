@@ -48,6 +48,9 @@ fn test_numbers() {
     var integers: i64[>..] = [-9223372036854775808, -1, 0, 1, 9223372036854775807];
     let text, error = json_codec::serialize(integers);
     assert(error.len == 0 && text == "[-9223372036854775808,-1,0,1,9223372036854775807]");
+    var boundaries: i64[>..] = [-10001, -10000, -9999, -1000, -999, -100, -99, -10, -9, -1, 0, 1, 9, 10, 99, 100, 999, 1000, 9999, 10000, 10001];
+    let boundary_text, boundary_error = json_codec::serialize(boundaries);
+    assert(boundary_error.len == 0 && boundary_text == "[-10001,-10000,-9999,-1000,-999,-100,-99,-10,-9,-1,0,1,9,10,99,100,999,1000,9999,10000,10001]");
     var reals: f64[>..] = [-0.0, 0.0, 1.0, -1.25, 1e-5, 1e16, 1e17, 5e-324, 1.7976931348623157e308];
     let encoded, encode_error = json_codec::serialize(reals);
     assert(encode_error.len == 0 && encoded == "[-0.0,0.0,1.0,-1.25,0.00001,1e16,1e17,5e-324,1.7976931348623157e308]");
@@ -64,7 +67,7 @@ fn test_numbers() {
 }
 fn test_integer_paths() {
     // Exercise every fast-path value and both boundaries under hostile hooks.
-    for i in -1..10002 {
+    for i in -10002..10002 {
         var value = i;
         let text, error = json_codec::serialize(value);
         assert(error.len == 0 && text.len > 0);
