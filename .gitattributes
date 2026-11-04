@@ -1,0 +1,2 @@
+# Preserve vendored upstream bytes and their original whitespace conventions.
+native/vendor/** -whitespace

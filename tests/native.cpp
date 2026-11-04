@@ -51,7 +51,10 @@ static void numbers() {
         assert(n == 0 || n < (int64_t)text.size());
     }
     std::string tiny = "-0.0";
-    assert(gj_parse_number(span(tiny), value) == 4 && bits(*value) == bits(-0.0));
+    assert(gj_parse_number(span(tiny), value) == 4);
+    double aligned_value;
+    memcpy(&aligned_value, packed + 1, sizeof aligned_value);
+    assert(bits(aligned_value) == bits(-0.0));
     std::string too_long(129, '1');
     assert(gj_parse_number(span(too_long), value) == 0);
     for (int length = 0; length <= 130; ++length) {
@@ -138,7 +141,9 @@ static void strings() {
     uint8_t ascii;
     std::string plain(40, 'a');
     gj_prefix(span(plain), 0, position, &ascii);
-    assert(*position == 40 && ascii);
+    int64_t aligned_position;
+    memcpy(&aligned_position, packed + 1, sizeof aligned_position);
+    assert(aligned_position == 40 && ascii);
     plain += '"';
     assert(gj_unquote(span(plain), 0, {out, 8}, position, &done) == 8);
 }
