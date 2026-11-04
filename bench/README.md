@@ -63,6 +63,11 @@ are unchanged. Both measured builds use
 the same controlled environment, fresh native cache and release flags; sanitizer
 and fuzz instrumentation are disabled.
 
+A later Unicode-decoder cleanup and native contract comments produced
+byte-identical native objects with GCC and Clang in default and native Release
+profiles; see the [maintainability checks](../docs/validation.md#maintainability-cleanup).
+The timings here still refer to the measured commit above.
+
 The previous SQLite matched series completed before this CPU 2 window began.
 Sibling owners agreed to keep new heavy jobs off CPU 2; other-core validation
 continued. Our fuzzing and independent review had finished before timing.

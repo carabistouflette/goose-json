@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Split the public tests into ten named groups, preserving their checks and
+  execution order; remove a redundant numeric cast.
+- Clarify private native contracts and simplify Unicode escape control flow.
+  Checked Release objects remain byte-identical with GCC and Clang.
 - Run the public suite with Goose's debug checks in runner and compiled modes
   in CI (`make test-debug`).
 - Compare fuzzed escaped bytes against an independent bytewise oracle, alongside

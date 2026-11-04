@@ -1,9 +1,10 @@
 # Validation record
 
 Recorded 2026-11-04 for the native codec measured at
-`6fad097cef35c0623b45e96e84246de6b0a64a70`. Subsequent documentation and test
-changes preserve the measured production source hashes. This record describes
-checks performed, not a security certification or a guarantee on other systems.
+`6fad097cef35c0623b45e96e84246de6b0a64a70`. Subsequent audits and source cleanups
+are recorded below; timings refer to the exact benchmark source commits. This
+record describes checks performed, not a security certification or a guarantee
+on other systems.
 
 ## Correctness and memory safety
 
@@ -92,3 +93,30 @@ The public-contract/Python probes and mutation experiment were one-off audit
 tools; they are not maintained CI targets. The debug suite and escaped-byte
 oracle are maintained in this repository. This audit does not extend platform
 support or establish a universal security guarantee.
+
+## Maintainability cleanup
+
+The cleanup after `ec6ac84a99a4dcc339c31d45fbfca5020aafdb79` groups the public
+suite into ten named functions, documents private native span/chunk contracts,
+and removes an unreachable second Unicode-escape branch. All nonblank test-body
+lines were retained in their original order, except removal of one redundant
+integer-to-float cast; each group is called exactly once.
+
+The resulting native source fingerprint is
+`37002ab348dd704f7eefbaafa88dac48f1ad320cf4824950ba9f313a1102ae6c`.
+Public normal/debug checks, GCC/Clang ASan/UBSan suites and 100,000 fuzz cases
+per SSE2/AVX2/scalar scanner configuration passed.
+
+For each of G++ 16.2.1 and Clang 23.1.4, `native/accelerated.cpp` compiled to a
+byte-identical object before and after the cleanup, using
+`-O3 -DNDEBUG -std=c++17 -fPIC`, the project's namespace definitions and unchanged vendor
+sources. Both default CPU flags and `-march=native` were checked. This is object
+identity for those compiler/profile pairs, not a fresh latency measurement or
+a guarantee for every compiler and platform.
+
+An independent GPT-6.1 Sol ultra review found no blockers. It confirmed all 76
+assertions and 20 `reject` calls were retained, checked the declared native
+contracts and verified the object hashes. Targeted Clang ASan/UBSan Unicode and
+chunk differentials passed 2,365,704 cases per SSE2 and portable-kernel build,
+covering UTF-16 code units, surrogate boundaries, malformed escapes, capacities,
+prefix lengths, guard bytes and byte-aligned references.
