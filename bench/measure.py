@@ -43,6 +43,17 @@ def source_hashes(output=None):
     }
 
 
+def build_environment(native):
+    # CMake caches inherited flags at configuration time. Control them and use
+    # a fresh Goose cache so candidate and baseline cannot reuse unequal builds.
+    env = dict(os.environ)
+    for name in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS",
+                 "CMAKE_TOOLCHAIN_FILE", "GOOSE_STDLIB", "CARGO_ENCODED_RUSTFLAGS"):
+        env.pop(name, None)
+    env["RUSTFLAGS"] = "-C target-cpu=native" if native else ""
+    return env
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--goose", default=os.environ.get("GOOSE", ".toolchain/goose/build/goose"))
@@ -70,14 +81,14 @@ def main():
     hashes = source_hashes(output)
     cc = str(ROOT / "bench/native-cc.sh") if args.native else "gcc"
     # An explicit profile avoids inheriting undisclosed Rust code-generation flags.
-    rustflags = "-C target-cpu=native" if args.native else ""
-    env = dict(os.environ, RUSTFLAGS=rustflags)
-    env.pop("CARGO_ENCODED_RUSTFLAGS", None)
+    env = build_environment(args.native)
+    rustflags = env["RUSTFLAGS"]
     with tempfile.TemporaryDirectory(prefix="goose-json-measure-") as directory:
         base = Path(directory)
+        build_env = dict(env, GOOSE_HOME=str(base / "goose-home"))
         # Freeze each executable: a concurrent portable smoke build must not
         # replace a binary between recorded runs.
-        run([goose, "build", "bench/bench.goose", "--cc", cc, "-O2", "-o", str(base / "after")])
+        run([goose, "build", "bench/bench.goose", "--cc", cc, "-O2", "-o", str(base / "after")], env=build_env)
         artifacts = run(["cargo", "build", "--locked", "--release", "--message-format=json", "--target-dir", ".build/compare-native" if args.native else ".build/compare-portable", "--manifest-path", "bench/compare/Cargo.toml"], env=env, stdout=subprocess.PIPE).stdout
         artifact = next(json.loads(line) for line in artifacts.splitlines() if json.loads(line).get("executable") and json.loads(line).get("target", {}).get("name") == "goose-json-compare")
         shutil.copy2(artifact["executable"], base / "compare")
@@ -89,7 +100,7 @@ def main():
             destination.write_bytes(run(["git", "show", f"{baseline}:{filename}"], stdout=subprocess.PIPE, text=False).stdout)
         shutil.copy(ROOT / "bench/bench.goose", base / "bench/bench.goose")
         shutil.copytree(ROOT / "bench/fixtures", base / "bench/fixtures")
-        run([goose, "build", str(base / "bench/bench.goose"), "--cc", cc, "-O2", "-o", str(base / "before")])
+        run([goose, "build", str(base / "bench/bench.goose"), "--cc", cc, "-O2", "-o", str(base / "before")], env=build_env)
         commands = {
             "before": [str(base / "before"), str(args.iterations)],
             "after": [str(base / "after"), str(args.iterations)],
@@ -110,6 +121,8 @@ def main():
             "affinity_cpu": args.cpu, "iterations": args.iterations,
             "goose_flags": "-O2", "gcc_flags": "-O2" + (" -march=native" if args.native else ""),
             "rustflags": rustflags, "rust_profile": artifact["profile"],
+            "goose_cache": "isolated per recording",
+            "inherited_c_cpp_flags": False,
             "process_order_seed": 219, "runs": [],
             "executable_sha256": {name: hashlib.sha256(Path(command[0]).read_bytes()).hexdigest() for name, command in commands.items()},
             "source_sha256": {},

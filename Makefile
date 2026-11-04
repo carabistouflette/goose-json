@@ -9,27 +9,27 @@ setup:
 check:
 	python3 -m unittest discover -s tests -p 'test_*.py'
 	python3 scripts/native-manifest.py --check
-	$(GOOSE) format --check json_codec.goose examples tests bench
-	$(GOOSE) check tests/codec.goose
-	$(GOOSE) check examples/item.goose
-	$(GOOSE) check bench/bench.goose
+	"$(GOOSE)" format --check json_codec.goose examples tests bench
+	"$(GOOSE)" check tests/codec.goose
+	"$(GOOSE)" check examples/item.goose
+	"$(GOOSE)" check bench/bench.goose
 test:
 	python3 scripts/native-manifest.py --check
-	$(GOOSE) run tests/codec.goose
+	"$(GOOSE)" run tests/codec.goose
 	mkdir -p .build
-	$(GOOSE) build tests/codec.goose -o .build/codec
+	"$(GOOSE)" build tests/codec.goose -o .build/codec
 	./.build/codec
-	$(GOOSE) run examples/item.goose
-	$(GOOSE) run bench/bench.goose -- 10
+	"$(GOOSE)" run examples/item.goose
+	"$(GOOSE)" run bench/bench.goose -- 10
 format:
 	python3 scripts/native-manifest.py
-	$(GOOSE) format json_codec.goose examples tests bench
+	"$(GOOSE)" format json_codec.goose examples tests bench
 
 .PHONY: bench bench-build bench-compare
 bench-build:
 	python3 scripts/native-manifest.py --check
 	mkdir -p .build
-	$(GOOSE) build bench/bench.goose --cc $(BENCH_CC) -O2 -o .build/bench
+	"$(GOOSE)" build bench/bench.goose --cc "$(BENCH_CC)" -O2 -o .build/bench
 bench: bench-build
 	./.build/bench $(BENCH_ITERATIONS)
 bench-compare: bench

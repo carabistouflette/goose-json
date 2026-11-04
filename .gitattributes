@@ -1,2 +1,5 @@
+# Native source fingerprints must be identical across clean checkouts.
+* text=auto eol=lf
+
 # Preserve vendored upstream bytes and their original whitespace conventions.
 native/vendor/** -whitespace

@@ -14,6 +14,20 @@ measure = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(measure)
 
 
+class BuildEnvironmentTest(unittest.TestCase):
+    def test_inherited_flags_are_not_used(self):
+        flags = {"CXXFLAGS": "-march=native", "CFLAGS": "-O0", "CPPFLAGS": "-DOTHER",
+                 "LDFLAGS": "-flto", "CMAKE_TOOLCHAIN_FILE": "custom.cmake",
+                 "GOOSE_STDLIB": "/custom/stdlib", "CARGO_ENCODED_RUSTFLAGS": "-Copt-level=0"}
+        with patch.dict(measure.os.environ, flags):
+            for native in (False, True):
+                env = measure.build_environment(native)
+                for name in flags:
+                    self.assertNotIn(name, env)
+                self.assertEqual(env["RUSTFLAGS"], "-C target-cpu=native" if native else "")
+            self.assertEqual(measure.os.environ["CXXFLAGS"], "-march=native")
+
+
 class SourceHashesTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
