@@ -15,6 +15,17 @@ import time
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent.parent
+RUST_RELEASE_PROFILE = {
+    "opt-level": 3,
+    "debug": 0,
+    "debug-assertions": False,
+    "overflow-checks": False,
+    "lto": False,
+    "codegen-units": 16,
+    "incremental": False,
+    "panic": "unwind",
+    "strip": "none",
+}
 
 
 def run(command, **kwargs):
@@ -47,12 +58,41 @@ def source_hashes(output=None):
 def build_environment(native):
     # CMake caches inherited flags at configuration time. Control them and use
     # a fresh Goose cache so candidate and baseline cannot reuse unequal builds.
-    env = dict(os.environ)
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("CARGO_PROFILE_")}
     for name in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS",
                  "CMAKE_TOOLCHAIN_FILE", "GOOSE_STDLIB", "CARGO_ENCODED_RUSTFLAGS"):
         env.pop(name, None)
     env["RUSTFLAGS"] = "-C target-cpu=native" if native else ""
+    # Cargo's separate incremental switch can override profile.release settings.
+    env["CARGO_INCREMENTAL"] = "0"
     return env
+
+
+def release_profile_args():
+    args = []
+    for key, value in RUST_RELEASE_PROFILE.items():
+        args.extend(["--config", f"profile.release.{key}={json.dumps(value)}"])
+    return args
+
+
+def comparison_artifact(output):
+    expected = {
+        "opt_level": str(RUST_RELEASE_PROFILE["opt-level"]),
+        "debuginfo": RUST_RELEASE_PROFILE["debug"],
+        "debug_assertions": RUST_RELEASE_PROFILE["debug-assertions"],
+        "overflow_checks": RUST_RELEASE_PROFILE["overflow-checks"],
+        "test": False,
+    }
+    for line in output.splitlines():
+        artifact = json.loads(line)
+        if not artifact.get("executable") or artifact.get("target", {}).get("name") != "goose-json-compare":
+            continue
+        profile = artifact.get("profile", {})
+        if any(profile.get(key) != value for key, value in expected.items()):
+            raise RuntimeError(f"Cargo comparison executable has an unexpected release profile: {profile}")
+        return artifact
+    raise RuntimeError("Cargo did not produce the goose-json-compare executable")
 
 
 def main():
@@ -90,8 +130,11 @@ def main():
         # Freeze each executable: a concurrent portable smoke build must not
         # replace a binary between recorded runs.
         run([goose, "build", "bench/bench.goose", "--cc", cc, "-O2", "-o", str(base / "after")], env=build_env)
-        artifacts = run(["cargo", "build", "--locked", "--release", "--message-format=json", "--target-dir", ".build/compare-native" if args.native else ".build/compare-portable", "--manifest-path", "bench/compare/Cargo.toml"], env=env, stdout=subprocess.PIPE).stdout
-        artifact = next(json.loads(line) for line in artifacts.splitlines() if json.loads(line).get("executable") and json.loads(line).get("target", {}).get("name") == "goose-json-compare")
+        artifacts = run(["cargo", "build", "--locked", "--release", "--message-format=json",
+                         "--target-dir", ".build/compare-native" if args.native else ".build/compare-portable",
+                         "--manifest-path", "bench/compare/Cargo.toml", *release_profile_args()],
+                        env=env, stdout=subprocess.PIPE).stdout
+        artifact = comparison_artifact(artifacts)
         shutil.copy2(artifact["executable"], base / "compare")
         (base / "bench").mkdir()
         files = capture(["git", "ls-tree", "-r", "--name-only", baseline, "--", "json_codec.goose", "json_codec.build", "CMakeLists.txt", "native"]).splitlines()
@@ -122,6 +165,7 @@ def main():
             "affinity_cpu": args.cpu, "iterations": args.iterations,
             "goose_flags": "-O2", "gcc_flags": "-O2" + (" -march=native" if args.native else ""),
             "rustflags": rustflags, "rust_profile": artifact["profile"],
+            "rust_release_config": RUST_RELEASE_PROFILE,
             "goose_cache": "isolated per recording",
             "inherited_c_cpp_flags": False,
             "process_order_seed": 219, "runs": [], "process_timings": [],

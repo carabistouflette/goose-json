@@ -2,6 +2,7 @@
 """Source-drift detection must ignore output, but retain real input checks."""
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -26,6 +27,58 @@ class BuildEnvironmentTest(unittest.TestCase):
                     self.assertNotIn(name, env)
                 self.assertEqual(env["RUSTFLAGS"], "-C target-cpu=native" if native else "")
             self.assertEqual(measure.os.environ["CXXFLAGS"], "-march=native")
+
+    def test_cargo_profile_overrides_do_not_leak_into_builds(self):
+        overrides = {"CARGO_PROFILE_RELEASE_OPT_LEVEL": "0",
+                     "CARGO_PROFILE_RELEASE_LTO": "fat",
+                     "CARGO_PROFILE_RELEASE_PACKAGE_SERDE_DEBUG_ASSERTIONS": "true"}
+        with patch.dict(measure.os.environ, {**overrides, "CARGO_NET_OFFLINE": "true"}):
+            for native in (False, True):
+                env = measure.build_environment(native)
+                self.assertFalse(any(key.startswith("CARGO_PROFILE_") for key in env))
+                self.assertEqual(env["CARGO_NET_OFFLINE"], "true")
+            self.assertEqual(measure.os.environ["CARGO_PROFILE_RELEASE_OPT_LEVEL"], "0")
+
+    def test_incremental_override_is_disabled_without_changing_the_parent(self):
+        with patch.dict(measure.os.environ, {"CARGO_INCREMENTAL": "1",
+                                            "CARGO_BUILD_INCREMENTAL": "true"}):
+            for native in (False, True):
+                self.assertEqual(measure.build_environment(native)["CARGO_INCREMENTAL"], "0")
+            self.assertEqual(measure.os.environ["CARGO_INCREMENTAL"], "1")
+
+
+class ComparisonArtifactTest(unittest.TestCase):
+    def artifact(self):
+        return {"reason": "compiler-artifact", "target": {"name": "goose-json-compare"},
+                "executable": "/tmp/comparison executable",
+                "profile": {"opt_level": "3", "debuginfo": 0, "debug_assertions": False,
+                            "overflow_checks": False, "test": False}}
+
+    def test_selects_the_executable_from_cargo_messages(self):
+        artifact = self.artifact()
+        messages = [dict(artifact, executable=None),
+                    {"reason": "build-script-executed"}, artifact,
+                    {"reason": "build-finished", "success": True}]
+        self.assertEqual(measure.comparison_artifact("\n".join(map(json.dumps, messages))), artifact)
+
+    def test_rejects_unexpected_profiles_before_measurement(self):
+        for key, value in (("opt_level", "0"), ("debuginfo", 2), ("debug_assertions", True),
+                           ("overflow_checks", True), ("test", True)):
+            with self.subTest(key=key):
+                artifact = self.artifact()
+                artifact["profile"][key] = value
+                with self.assertRaisesRegex(RuntimeError, "unexpected release profile"):
+                    measure.comparison_artifact(json.dumps(artifact))
+        artifact = self.artifact()
+        del artifact["profile"]
+        with self.assertRaisesRegex(RuntimeError, "unexpected release profile"):
+            measure.comparison_artifact(json.dumps(artifact))
+
+    def test_missing_executable_has_an_actionable_error(self):
+        artifact = self.artifact()
+        artifact["target"]["name"] = "another-binary"
+        with self.assertRaisesRegex(RuntimeError, "did not produce"):
+            measure.comparison_artifact(json.dumps(artifact))
 
 
 class SourceHashesTest(unittest.TestCase):
