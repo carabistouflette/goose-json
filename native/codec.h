@@ -32,6 +32,28 @@ static inline int gj_first(uint32_t mask) {
    Loads are strictly bounded; neither input padding nor alignment is assumed. */
 static inline int64_t gj_ascii_run(const uint8_t *s, int64_t n, int64_t i, int mode) {
 #if GJ_NATIVE && defined(__AVX2__)
+    while (n - i >= 128) {
+        __m256i combined = _mm256_set1_epi8(0);
+        for (int block = 0; block < 4; ++block) {
+            __m256i v = _mm256_loadu_si256((const __m256i *)(const void *)(s + i + block * 32));
+            __m256i bad = v;
+            if (mode) {
+                __m256i controls =
+                    mode == 2 ? _mm256_cmpgt_epi8(_mm256_set1_epi8(-96),
+                                                  _mm256_xor_si256(v, _mm256_set1_epi8(-128)))
+                              : _mm256_cmpgt_epi8(_mm256_set1_epi8(32), v);
+                bad = _mm256_or_si256(
+                    controls, _mm256_or_si256(_mm256_cmpeq_epi8(v, _mm256_set1_epi8('"')),
+                                              _mm256_cmpeq_epi8(v, _mm256_set1_epi8('\\'))));
+            }
+            combined = _mm256_or_si256(combined, bad);
+        }
+        if (_mm256_movemask_epi8(combined))
+            break;
+        i += 128;
+    }
+#endif
+#if GJ_NATIVE && defined(__AVX2__)
     while (n - i >= 32) {
         __m256i v = _mm256_loadu_si256((const __m256i *)(const void *)(s + i));
         unsigned mask = mode == 2 ? 0 : (unsigned)_mm256_movemask_epi8(v);
@@ -48,6 +70,26 @@ static inline int64_t gj_ascii_run(const uint8_t *s, int64_t n, int64_t i, int m
         if (mask)
             return i + gj_first(mask);
         i += 32;
+    }
+#endif
+#if GJ_NATIVE && defined(__SSE2__)
+    while (n - i >= 64) {
+        __m128i combined = _mm_set1_epi8(0);
+        for (int block = 0; block < 4; ++block) {
+            __m128i v = _mm_loadu_si128((const __m128i *)(const void *)(s + i + block * 16));
+            __m128i bad = v;
+            if (mode) {
+                __m128i controls = mode == 2 ? _mm_cmpgt_epi8(_mm_set1_epi8(-96),
+                                                              _mm_xor_si128(v, _mm_set1_epi8(-128)))
+                                             : _mm_cmpgt_epi8(_mm_set1_epi8(32), v);
+                bad = _mm_or_si128(controls, _mm_or_si128(_mm_cmpeq_epi8(v, _mm_set1_epi8('"')),
+                                                          _mm_cmpeq_epi8(v, _mm_set1_epi8('\\'))));
+            }
+            combined = _mm_or_si128(combined, bad);
+        }
+        if (_mm_movemask_epi8(combined))
+            break;
+        i += 64;
     }
 #endif
 #if GJ_NATIVE && defined(__SSE2__)
@@ -219,11 +261,14 @@ static inline int64_t gj_impl_escape_chunk(sl_u8 input, int64_t at, sl_u8 output
     while (i < n) {
         int64_t base = i, limit = n - i > 32 ? i + 32 : n;
         uint32_t mask = gj_specials(s + base, limit - base);
+        /* At most six output bytes per input byte, for at most 32 bytes.
+           A whole-block proof leaves the original checks for the final chunk. */
+        const int room = cap - used >= 6 * (limit - i);
         while (mask) {
             int64_t end = base + gj_first(mask);
             mask &= mask - 1;
             int64_t run = end - i;
-            if (run > cap - used) {
+            if (!room && run > cap - used) {
                 run = cap - used;
                 if (run)
                     gj_copy(out + used, s + i, run);
@@ -235,32 +280,21 @@ static inline int64_t gj_impl_escape_chunk(sl_u8 input, int64_t at, sl_u8 output
                 used += run;
                 i = end;
             }
-            if (cap - used < 6) {
+            if (!room && cap - used < 6) {
                 *position = i;
                 return used;
             }
             unsigned c = s[i++];
-            if (c == '"' || c == '\\') {
-                if (cap - used < 2)
-                    return -1;
+            static const uint8_t escapes[32] = {0, 0, 0, 0, 0, 0, 0, 0, 'b', 't', 'n', 0, 'f', 'r'};
+            uint8_t escaped = c < 32 ? escapes[c] : (uint8_t)c;
+            if (escaped) {
                 out[used++] = '\\';
-                out[used++] = (uint8_t)c;
-            } else if (c < 32) {
-                static const uint8_t escapes[32] = {0, 0,   0,   0,   0, 0,   0,
-                                                    0, 'b', 't', 'n', 0, 'f', 'r'};
-                if (escapes[c]) {
-                    if (cap - used < 2)
-                        return -1;
-                    out[used++] = '\\';
-                    out[used++] = escapes[c];
-                } else {
-                    if (cap - used < 6)
-                        return -1;
-                    memcpy(out + used, "\\u00", 4);
-                    used += 4;
-                    out[used++] = "0123456789abcdef"[c >> 4];
-                    out[used++] = "0123456789abcdef"[c & 15];
-                }
+                out[used++] = escaped;
+            } else {
+                memcpy(out + used, "\\u00", 4);
+                used += 4;
+                out[used++] = "0123456789abcdef"[c >> 4];
+                out[used++] = "0123456789abcdef"[c & 15];
             }
         }
         int64_t run = limit - i;
@@ -415,96 +449,4 @@ static inline int64_t gj_impl_unquote(sl_u8 input, int64_t at, sl_u8 output, gs_
     return -1; // Input ended before its closing quote.
 }
 
-static inline int64_t gj_impl_number(double value, sl_u8 output) {
-#if GJ_NATIVE
-    if (output.len < 32)
-        return -1;
-    uint64_t bits;
-    memcpy(&bits, &value, sizeof bits);
-    if (((bits >> 52) & 0x7ff) == 0x7ff)
-        return -1;
-    double magnitude = value < 0 ? -value : value;
-    if (magnitude >= 1e16 || (magnitude > 0 && magnitude < 1e-5))
-        return gj_cpp_scientific(value, output);
-    char storage[20];
-    char *digits = storage + sizeof storage;
-    uint8_t *text = output.data;
-    int negative = (int)(bits >> 63), count = 0, exponent;
-    uint32_t ieee_exp = (uint32_t)((bits >> 52) & 0x7ff);
-    uint64_t ieee_mantissa = bits & 0xfffffffffffff;
-    gj_decimal decimal;
-    if (!ieee_exp && !ieee_mantissa) {
-        decimal.mantissa = 0;
-        decimal.exponent = 0;
-    } else
-        decimal = gj_cpp_decimal(value);
-    static const char pairs[] = "0001020304050607080910111213141516171819"
-                                "2021222324252627282930313233343536373839"
-                                "4041424344454647484950515253545556575859"
-                                "6061626364656667686970717273747576777879"
-                                "8081828384858687888990919293949596979899";
-    uint64_t mantissa = decimal.mantissa;
-    while (mantissa >= 100) {
-        uint64_t quotient = mantissa / 100;
-        unsigned remainder = (unsigned)(mantissa - quotient * 100);
-        digits -= 2;
-        memcpy(digits, pairs + remainder * 2, 2);
-        mantissa = quotient;
-    }
-    if (mantissa < 10)
-        *--digits = (char)('0' + mantissa);
-    else {
-        digits -= 2;
-        memcpy(digits, pairs + mantissa * 2, 2);
-    }
-    count = (int)(storage + sizeof storage - digits);
-    exponent = decimal.exponent + count - 1;
-    int point = exponent + 1, used = 0;
-    if (negative)
-        text[used++] = '-';
-    if (point > 0 && point < count) {
-        memcpy(text + used, digits, (size_t)point);
-        used += point;
-        text[used++] = '.';
-        memcpy(text + used, digits + point, (size_t)(count - point));
-        used += count - point;
-    } else if (point >= count && point <= 16) {
-        memcpy(text + used, digits, (size_t)count);
-        used += count;
-        for (int j = count; j < point; ++j)
-            text[used++] = '0';
-        text[used++] = '.';
-        text[used++] = '0';
-    } else if (point > -5 && point <= 0) {
-        text[used++] = '0';
-        text[used++] = '.';
-        for (int j = 0; j < -point; ++j)
-            text[used++] = '0';
-        memcpy(text + used, digits, (size_t)count);
-        used += count;
-    } else {
-        text[used++] = digits[0];
-        if (count > 1) {
-            text[used++] = '.';
-            memcpy(text + used, digits + 1, (size_t)(count - 1));
-            used += count - 1;
-        }
-        text[used++] = 'e';
-        if (exponent < 0) {
-            text[used++] = '-';
-            exponent = -exponent;
-        }
-        if (exponent >= 100)
-            text[used++] = (char)('0' + exponent / 100);
-        if (exponent >= 10)
-            text[used++] = (char)('0' + (exponent / 10) % 10);
-        text[used++] = (char)('0' + exponent % 10);
-    }
-    return used;
-#else
-    (void)output;
-    (void)value;
-    return -1;
-#endif
-}
 #endif
