@@ -296,6 +296,9 @@ fn test_text_chunk_boundaries() {
         var value = json_codec::Text { bytes: [] };
         for i in 4090 + offset { value.bytes.push('a'); }
         value.bytes.append("\n\"\\é😀");
+        // Keep multiple escape chunks even when the large prefix is reused.
+        for i in 4090 + offset { value.bytes.push('b'); }
+        value.bytes.append("\n\"\\é😀");
         let text, error = json_codec::serialize(value);
         var expected: u8[>..] = [];
         json::format_string(expected, value.bytes);
