@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Source-drift detection must ignore output, but retain real input checks."""
+"""Recorder controls cover build profiles, source integrity and typed consumption."""
 import importlib.util
 import io
 import json

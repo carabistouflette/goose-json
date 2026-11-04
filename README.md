@@ -60,48 +60,55 @@ scalars and arrays, use `deserialize_into(input, destination)`.
 
 ## Performance
 
-These owned-result API microbenchmarks compare pinned JSON implementations on
-all ten fixtures. Some cases remain faster in the compared libraries. Binary
-Protobuf and borrowing DOM results use separate contracts and are linked below.
+These owned-result API microbenchmarks cover thirteen fixtures, including
+signed/large integers and a mixed event. Some cases remain faster in the compared
+libraries. Binary Protobuf and borrowing DOM results have separate contracts.
 
 Times are **microseconds per operation**, lower is better: medians of three
 process passes on a Core Ultra 7 258V, CPU 4, with native CPU tuning. This is a
-shared-host synthetic corpus; close timings can overlap. Measured source
-`ca9b0dc` includes formatter isolation; historical results remain available.
+shared-host synthetic corpus; close timings can overlap. The expanded harness
+is measured against fixed `v0.1.1`, with identical production codec sources.
+[Provenance and profiles](bench/results/corpus-native-2026-11-04) are retained.
 
 <details>
-<summary>Decode timings — all ten fixtures</summary>
+<summary>Decode timings — all thirteen fixtures</summary>
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.073 | 0.179 | 0.105 |
-| Escaped / Unicode | 0.140 | 0.294 | 0.209 |
-| 1,024 integers | 9.410 | 18.665 | 12.955 |
-| 256 simple floats | 3.312 | 5.436 | 5.173 |
-| 256 wide-exponent floats | 6.191 | 10.511 | 15.091 |
-| 64-byte ASCII text | 0.081 | 0.129 | 0.110 |
-| 8 KiB sparse escapes | 1.431 | 1.624 | 2.189 |
-| 8 KiB ASCII text | 0.886 | 1.154 | 1.575 |
-| Dense escapes / Unicode | 10.137 | 14.946 | 19.276 |
-| 16 reversed fields | 0.332 | 0.666 | 0.525 |
+| Small record | 0.074 | 0.189 | 0.105 |
+| Escaped / Unicode | 0.144 | 0.356 | 0.239 |
+| 1,024 nonnegative integers | 7.754 | 19.948 | 14.639 |
+| 1,024 signed small integers | 7.354 | 19.390 | 14.287 |
+| 1,024 wide integers | 21.677 | 24.005 | 30.223 |
+| Mixed event | 1.670 | 2.988 | 3.054 |
+| 256 simple floats | 3.310 | 5.442 | 4.877 |
+| 256 wide-exponent floats | 5.942 | 10.437 | 14.324 |
+| 64-byte ASCII text | 0.094 | 0.137 | 0.109 |
+| 8 KiB sparse escapes | 1.239 | 1.944 | 2.246 |
+| 8 KiB ASCII text | 0.878 | 1.192 | 1.472 |
+| Dense escapes / Unicode | 10.979 | 16.076 | 20.499 |
+| 16 reversed fields | 0.317 | 0.698 | 0.694 |
 
 </details>
 
 <details>
-<summary>Encode timings — all ten fixtures</summary>
+<summary>Encode timings — all thirteen fixtures</summary>
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.037 | 0.054 | 0.051 |
-| Escaped / Unicode | 0.070 | 0.113 | 0.064 |
-| 1,024 integers | 4.392 | 6.915 | 6.338 |
-| 256 simple floats | 7.549 | 9.870 | 6.238 |
-| 256 wide-exponent floats | 8.549 | 11.084 | 6.254 |
-| 64-byte ASCII text | 0.036 | 0.097 | 0.085 |
-| 8 KiB sparse escapes | 1.273 | 0.469 | 6.691 |
-| 8 KiB ASCII text | 0.566 | 0.455 | 6.438 |
-| Dense escapes / Unicode | 7.809 | 5.633 | 9.054 |
-| 16 reversed fields | 0.117 | 0.298 | 0.296 |
+| Small record | 0.035 | 0.058 | 0.051 |
+| Escaped / Unicode | 0.070 | 0.129 | 0.073 |
+| 1,024 nonnegative integers | 3.983 | 7.174 | 6.987 |
+| 1,024 signed small integers | 4.881 | 6.486 | 6.089 |
+| 1,024 wide integers | 18.910 | 12.252 | 12.415 |
+| Mixed event | 1.846 | 2.255 | 1.701 |
+| 256 simple floats | 7.379 | 10.147 | 6.264 |
+| 256 wide-exponent floats | 8.148 | 11.146 | 6.478 |
+| 64-byte ASCII text | 0.038 | 0.098 | 0.073 |
+| 8 KiB sparse escapes | 1.180 | 0.500 | 3.958 |
+| 8 KiB ASCII text | 0.546 | 0.447 | 3.391 |
+| Dense escapes / Unicode | 7.780 | 7.266 | 6.864 |
+| 16 reversed fields | 0.125 | 0.319 | 0.328 |
 
 </details>
 
