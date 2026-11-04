@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def run(command, **kwargs):
-    return subprocess.run(command, cwd=ROOT, check=True, text=True, **kwargs)
+    return subprocess.run(command, cwd=ROOT, check=True, **dict({"text": True}, **kwargs))
 
 
 def capture(command):
@@ -25,7 +25,8 @@ def capture(command):
 
 
 def source_hashes():
-    paths = [ROOT / "json_codec.goose", ROOT / "Makefile"]
+    paths = [ROOT / "json_codec.goose", ROOT / "Makefile", ROOT / "CMakeLists.txt", ROOT / "json_codec.build", ROOT / "bench/g++", ROOT / "scripts/native-manifest.py"]
+    paths += [p for p in (ROOT / "native").rglob("*") if p.is_file()]
     paths += [p for p in (ROOT / "bench").rglob("*") if p.is_file() and "target" not in p.parts and "results" not in p.parts and p.suffix in (".goose", ".rs", ".toml", ".lock", ".json", ".py", ".sh")]
     return {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(paths)}
 
@@ -51,6 +52,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     if any(output.iterdir()):
         parser.error("--output must be empty (preserve previous measurements)")
+    run(["python3", "scripts/native-manifest.py", "--check"])
     hashes = source_hashes()
     cc = str(ROOT / "bench/native-cc.sh") if args.native else "gcc"
     # An explicit profile avoids inheriting undisclosed Rust code-generation flags.
@@ -66,7 +68,11 @@ def main():
         artifact = next(json.loads(line) for line in artifacts.splitlines() if json.loads(line).get("executable") and json.loads(line).get("target", {}).get("name") == "goose-json-compare")
         shutil.copy2(artifact["executable"], base / "compare")
         (base / "bench").mkdir()
-        (base / "json_codec.goose").write_text(capture(["git", "show", f"{baseline}:json_codec.goose"]) + "\n")
+        files = capture(["git", "ls-tree", "-r", "--name-only", baseline, "--", "json_codec.goose", "json_codec.build", "CMakeLists.txt", "native"]).splitlines()
+        for filename in files:
+            destination = base / filename
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(run(["git", "show", f"{baseline}:{filename}"], stdout=subprocess.PIPE, text=False).stdout)
         shutil.copy(ROOT / "bench/bench.goose", base / "bench/bench.goose")
         shutil.copytree(ROOT / "bench/fixtures", base / "bench/fixtures")
         run([goose, "build", str(base / "bench/bench.goose"), "--cc", cc, "-O2", "-o", str(base / "before")])
@@ -80,6 +86,8 @@ def main():
             "baseline": baseline, "source_head": source,
             "goose_revision": (ROOT / "GOOSE_REVISION").read_text().strip(),
             "goose_version": capture([goose, "version"]),
+            "g++": capture(["g++", "--version"]).splitlines()[0],
+            "native_cxx_flags": "-O3 -DNDEBUG" + (" -march=native" if args.native else ""),
             "gcc": capture(["gcc", "--version"]).splitlines()[0],
             "rustc": capture(["rustc", "--version"]),
             "cargo": capture(["cargo", "--version"]),

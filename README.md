@@ -2,7 +2,7 @@
 
 Automatic, strict JSON ↔ struct mapping for the [Goose language](https://github.com/aardappel/goose), using `const for` field reflection. Apache-2.0. Experimental API, no release yet.
 
-Addresses the request in [discussion #219](https://github.com/aardappel/goose/discussions/219) without macros, code generation, or a runtime reflection registry. There are no runtime dependencies beyond Goose's standard library.
+Addresses the request in [discussion #219](https://github.com/aardappel/goose/discussions/219) without macros, code generation, or a runtime reflection registry. Native builds use small bounded C++ kernels with vendored Dragonbox and simdutf; Goose owns all storage. The in-process TinyCC runner uses the Goose implementation. See [native build and dependency details](native/README.md).
 
 ```goose
 import json_codec from "carabistouflette/goose-json@<commit>";
@@ -17,7 +17,7 @@ fn main() {
 }
 ```
 
-Replace `<commit>` with a published full commit hash. Inside this checkout, use `import json_codec from "..";` from an example or test. Run `make setup`, then `make check test`. Setup requires Git, CMake 3.27+, a C/C++20 toolchain, and Make; Linux's in-process runner requires libc development headers. Alternatively, `make GOOSE=/path/to/goose check test`. [GOOSE_REVISION](GOOSE_REVISION) pins the tested compiler; compatibility with other revisions is not promised.
+Replace `<commit>` with a published full commit hash. Inside this checkout, use `import json_codec from "..";` from an example or test. Run `make setup`, then `make check test`. Setup requires Git, CMake 3.27+, a C/C++20 toolchain, and Make; Linux's in-process runner requires libc development headers. Even with an installed Goose compiler, this package needs CMake and a C++17 compiler to build its static native library, plus the toolchain's C++ runtime. Alternatively, `make GOOSE=/path/to/goose check test`. [GOOSE_REVISION](GOOSE_REVISION) pins the tested compiler; compatibility with other revisions is not promised.
 
 ## Contract
 
@@ -32,7 +32,7 @@ Replace `<commit>` with a published full commit hash. Inside this checkout, use 
 
 ## Cost and limits
 
-Parsing uses Goose's streaming reader, with no document tree. Field dispatch is a linear comparison over the compile-time expanded fields: O(input bytes + object members × schema fields). It allocates seen-field flags per object, scratch storage for escaped keys/strings, and owned text/array results. Unescaped strings are copied once into their owner; escaped strings pass through scratch first. Serialization appends directly to a grow-only builder, with compile-time expanded field access.
+Parsing uses Goose's streaming reader, with no document tree. Field dispatch is a linear comparison over the compile-time expanded fields: O(input bytes + object members × schema fields). It allocates seen-field flags per object, scratch storage for escaped keys/strings, and owned text/array results. Unescaped strings are copied once into their owner. Native escaped strings stream through a fixed 4 KiB buffer into owned storage; they do not allocate a second full-string scratch buffer. Native float arrays format bounded batches of 64 values. Serialization appends to a checked grow-only builder, with compile-time expanded field access. The portable implementation uses the standard reader and writer where appropriate.
 
 Floating-point tokens are limited to 128 bytes (`MAX_NUMBER_BYTES`) before the upstream reader runs, bounding its arbitrary-precision conversion cost and preventing its saturated-exponent edge case. This accepts every finite f64 output produced by the writer but intentionally rejects longer valid JSON numbers. Input is limited to 1 MiB (`MAX_INPUT_BYTES`) before parsing and is checked for UTF-8 in a linear pass. Unknown fields fail immediately rather than walking arbitrary nested input. Recursion follows the finite, statically known schema; no recursive reference graphs are supported. The input cap bounds accepted wire size, not an exact allocator budget: wide schemas and tiny scalar arrays can expand in memory. Serialization has no output-size cap.
 
@@ -61,6 +61,6 @@ See [benchmark setup and methodology](bench/README.md). CI checks execution and 
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Tests cover the in-process and native execution paths, ownership, nested records, scalar arrays, key escaping, integer limits, malformed input, Unicode, and size limits.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Tests cover the in-process and native execution paths, ownership, nested records, scalar arrays, key escaping, integer limits, malformed input, Unicode, and size limits. `make test-native CXX=clang++` runs the native kernels under ASan/UBSan, including one million float bit patterns and guard-page checks. After editing native sources, run `make format` to refresh the package cache fingerprint.
 
 [Apache-2.0](LICENSE). Copyright 2026 goose-json contributors.

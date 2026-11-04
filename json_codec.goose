@@ -3,6 +3,16 @@ namespace json_codec;
 import std;
 import json;
 
+// Internal C ABI wrappers; no native function retains a reference.
+extern fn native_available() -> bool = "gj_available";
+extern fn native_utf8(text: const u8[:]) -> bool = "gj_utf8";
+extern fn native_prefix(text: const u8[:], at: i64, end: i64&, ascii: bool&) = "gj_prefix";
+extern fn native_quote_prefix(text: const u8[:]) -> i64 = "gj_quote_prefix";
+extern fn native_escape_chunk(text: const u8[:], at: i64, out: u8[:], position: i64&) -> i64 = "gj_escape_chunk";
+extern fn native_unquote(text: const u8[:], at: i64, out: u8[:], position: i64&, done: bool&) -> i64 = "gj_unquote";
+extern fn native_number(value: f64, out: u8[:]) -> i64 = "gj_number";
+extern fn native_float_chunk(values: const f64[:], out: u8[:], prefix: bool) -> i64 = "gj_float_chunk";
+
 // Owned UTF-8 text; unlike a slice, it outlives the JSON input.
 struct Text { bytes: u8[>..] }
 let MAX_INPUT_BYTES = 1048576;
@@ -28,6 +38,30 @@ fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
 }
 
 fn read(r: json::Reader&, value: Text&) {
+    if native_available() {
+        if json::peek(r) != '"' { json::fail(r, "expected a string"); return; }
+        let start = r.pos + 1;
+        var end = start;
+        var ascii = true;
+        native_prefix(r.text, start, end, ascii);
+        if end == r.text.len { json::fail(r, "unterminated string"); return; }
+        value.bytes.clear();
+        if r.text[end] == '"' {
+            value.bytes.append(r.text[start..end]);
+            r.pos = end + 1;
+        } else {
+            var buffer: u8[4096] = [0; 4096];
+            var position = start;
+            var done = false;
+            while !done {
+                let count = native_unquote(r.text, position, buffer[..], position, done);
+                if count < 0 { json::fail(r, "bad string or Unicode escape"); return; }
+                value.bytes.append(buffer[..count]);
+            }
+            r.pos = position;
+        }
+        return;
+    }
     // The entry point already validated UTF-8. A raw string can be copied
     // directly; escaped strings still use the standard Unicode decoder.
     if json::peek(r) == '"' {
@@ -130,6 +164,23 @@ fn serialize<T>(value: T&) -> u8[>..], u8[>..] {
     return out, [];
 }
 fn write(out: u8[>..]&, value: Text&) -> bool {
+    if native_available() && value.bytes.len >= 64 {
+        let prefix = native_quote_prefix(value.bytes);
+        if prefix < 0 { return false; }
+        out.push('"');
+        if prefix == value.bytes.len { out.append(value.bytes); }
+        else {
+            var buffer: u8[4096] = [0; 4096];
+            var position = 0;
+            while position < value.bytes.len {
+                let count = native_escape_chunk(value.bytes, position, buffer[..], position);
+                if count < 0 { return false; }
+                out.append(buffer[..count]);
+            }
+        }
+        out.push('"');
+        return true;
+    }
     let end, ascii = plain_prefix(value.bytes, 0);
     // The prefix scan proves ASCII safe. Unicode needs the full validator;
     // bytes after the first escape must be checked even if the prefix is ASCII.
@@ -148,8 +199,14 @@ checkfree fn has_zero(word: u64) -> bool {
 
 // Find a run without JSON escapes, including raw Unicode. Bytewise assembly
 // permits unaligned input without casts, overreads, or target-specific code.
-checkfree fn plain_prefix(text: u8[:], at: i64) -> i64, bool {
+fn plain_prefix(text: u8[:], at: i64) -> i64, bool {
     assert(at >= 0 && at <= text.len);
+    if native_available() && text.len - at >= 32 {
+        var end = at;
+        var ascii = true;
+        native_prefix(text, at, end, ascii);
+        return end, ascii;
+    }
     var end = at;
     var high: u64 = 0;
     if text.len - end >= 32 {
@@ -176,6 +233,13 @@ fn write(out: u8[>..]&, value: i64&) -> bool { json::format_int(out, value); ret
 fn write(out: u8[>..]&, value: bool&) -> bool { json::format_bool(out, value); return true; }
 fn write(out: u8[>..]&, value: f64&) -> bool {
     if !finite(value) { return false; }
+    if native_available() {
+        var text: u8[32] = [0; 32];
+        let count = native_number(value, text[..]);
+        if count < 0 { return false; }
+        out.append(text[..count]);
+        return true;
+    }
     json::format_number(out, value);
     return true;
 }
@@ -230,6 +294,7 @@ fn finite(value: f64) -> bool {
 
 // Reject overlong encodings, surrogates, truncation, and > U+10FFFF.
 fn valid_utf8(text: u8[:]) -> bool {
+    if native_available() && text.len >= 32 { return native_utf8(text); }
     var i = 0;
     // Scan an ASCII prefix in safe eight-byte chunks, then use the scalar
     // validator for the remainder. No word casts or alignment assumptions.
@@ -279,6 +344,20 @@ fn write(out: u8[>..]&, value: bool[>..]&) -> bool {
     return true;
 }
 fn write(out: u8[>..]&, value: f64[>..]&) -> bool {
+    if native_available() {
+        out.push('[');
+        var buffer: u8[2112] = [0; 2112];
+        var start = 0;
+        while start < value.len {
+            let end = min(value.len, start + min(64, value.len - start));
+            let count = native_float_chunk(value[start..end], buffer[..], start > 0);
+            if count < 0 { return false; }
+            out.append(buffer[..count]);
+            start = end;
+        }
+        out.push(']');
+        return true;
+    }
     out.push('[');
     for &element, i in value {
         if i > 0 { out.push(','); }

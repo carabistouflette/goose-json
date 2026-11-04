@@ -1,0 +1,11 @@
+goose-json
+Copyright 2026 goose-json contributors
+
+This product includes Dragonbox by Junekey Jeon and contributors,
+licensed under Apache-2.0 WITH LLVM-exception (alternative BSL-1.0).
+See native/vendor/dragonbox/LICENSE-Apache2-LLVM and native/README.md.
+
+This product includes simdutf by the simdutf authors and contributors,
+licensed under Apache-2.0 (alternative MIT).
+See native/vendor/simdutf/LICENSE-APACHE and native/README.md.
+Original copyright and license notices are retained in the vendored sources.

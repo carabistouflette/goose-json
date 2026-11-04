@@ -220,5 +220,40 @@ fn main() {
         var actual: i64 = 0;
         assert(json_codec::deserialize_into(input, actual).len > 0);
     }
+    // Float layout, signed zero, chunk boundaries and public API round-trips.
+    let float_inputs: const u8[:][10] = ["0.0", "-0.0", "1e-5", "1e-6", "1e15", "1e16", "5e-324", "2.2250738585072014e-308", "1.7976931348623157e308", "1.0000000000000002"];
+    for input in float_inputs {
+        var value: f64 = 0.0;
+        assert(json_codec::deserialize_into(input, value).len == 0);
+        let text, error = json_codec::serialize(value);
+        assert(error.len == 0);
+        var back: f64 = 0.0;
+        assert(json_codec::deserialize_into(text, back).len == 0);
+        assert(float_text::bits_of(value) == float_text::bits_of(back));
+    }
+    for count in 130 {
+        var values: f64[>..] = [];
+        for i in count { values.push((i - 64) / 8.0); }
+        let text, error = json_codec::serialize(values);
+        assert(error.len == 0);
+        var back: f64[>..] = [];
+        assert(json_codec::deserialize_into(text, back).len == 0 && back.len == count);
+        for i in count { assert(back[i] == values[i]); }
+    }
+    var bad_chunk: f64[>..] = [];
+    for i in 65 { bad_chunk.push(1.0); }
+    bad_chunk.push(1.0 / 0.0);
+    let no_text, bad_chunk_error = json_codec::serialize(bad_chunk);
+    assert(no_text.len == 0 && bad_chunk_error.len > 0);
+    // Escapes and surrogate pairs straddle native block/output boundaries.
+    for offset in 96 {
+        var value = json_codec::Text { bytes: [] };
+        for i in 4090 + offset { value.bytes.push('a'); }
+        value.bytes.append("\n\"\\é😀");
+        let text, error = json_codec::serialize(value);
+        assert(error.len == 0);
+        var back = json_codec::Text { bytes: [] };
+        assert(json_codec::deserialize_into(text, back).len == 0 && back.bytes[..] == value.bytes[..]);
+    }
     print("codec tests passed");
 }

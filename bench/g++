@@ -1,0 +1,3 @@
+#!/bin/sh
+# Goose discovers the C++ driver beside native-cc.sh. Tune both languages equally.
+exec g++ -march=native "$@"

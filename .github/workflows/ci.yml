@@ -17,5 +17,6 @@ jobs:
           key: goose-${{ runner.os }}-${{ hashFiles('GOOSE_REVISION', 'scripts/setup-goose.sh') }}
       - run: make setup
       - run: make check test
+      - run: make test-native CXX=clang++
       - run: make bench-compare BENCH_ITERATIONS=10
       - run: python3 bench/measure.py --native --iterations 10 --runs 1 --output .build/native-smoke
