@@ -10,7 +10,7 @@ struct definition; decoded strings and arrays own their storage.
 Save this as `main.goose` and run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@06622d495175842914f7381b72fd6d855733acc3";
+import json_codec from "carabistouflette/goose-json@52473a635952b12eddbb78b4d241b24d3d9f0b21";
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 
@@ -65,11 +65,11 @@ signed/large integers and a mixed event. Some cases remain faster in the compare
 libraries. Binary Protobuf and borrowing DOM results have separate contracts.
 
 Times are **microseconds per operation**, lower is better: medians of three
-process passes on a Core Ultra 7 258V, CPU 4, with native CPU tuning. Source
-`06622d4` is measured against fixed `v0.1.2`; all thirteen fixtures are shown.
-Wide-integer encoding took less time in each matched pass. The final pass had
-substantial CPU contention; every sample is retained. This shared-host synthetic
-corpus does not establish a reliable cross-library ranking.
+process passes on a Core Ultra 7 258V, CPU4, with native CPU tuning. The release
+rerun measures `52473a6` against fixed `v0.1.2`, with all thirteen fixtures shown.
+Every sample is retained. Two baseline passes lost more CPU scheduling time
+than the candidate, which can favor current results. The shared host had no
+exclusive reservation or fixed frequency; no reliable ranking is claimed.
 [Matched changes, raw data and limitations](bench/README.md#recorded-native-results).
 
 <details>
@@ -77,19 +77,19 @@ corpus does not establish a reliable cross-library ranking.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.121 | 0.230 | 0.115 |
-| Escaped / Unicode | 0.224 | 0.475 | 0.323 |
-| 1,024 nonnegative integers | 11.420 | 28.044 | 19.681 |
-| 1,024 signed small integers | 12.043 | 28.151 | 20.245 |
-| 1,024 wide integers | 33.276 | 33.794 | 45.978 |
-| Mixed event | 2.578 | 4.315 | 4.711 |
-| 256 simple floats | 5.060 | 8.856 | 8.444 |
-| 256 wide-exponent floats | 8.832 | 16.221 | 21.459 |
-| 64-byte ASCII text | 0.122 | 0.218 | 0.161 |
-| 8 KiB sparse escapes | 2.042 | 2.664 | 3.323 |
-| 8 KiB ASCII text | 1.339 | 1.835 | 2.253 |
-| Dense escapes / Unicode | 14.762 | 22.900 | 32.828 |
-| 16 reversed fields | 0.493 | 1.019 | 0.863 |
+| Small record | 0.113 | 0.281 | 0.113 |
+| Escaped / Unicode | 0.228 | 0.323 | 0.248 |
+| 1,024 nonnegative integers | 11.467 | 26.372 | 16.503 |
+| 1,024 signed small integers | 10.082 | 19.387 | 16.114 |
+| 1,024 wide integers | 32.243 | 30.750 | 36.127 |
+| Mixed event | 2.532 | 3.714 | 4.686 |
+| 256 simple floats | 4.886 | 8.035 | 6.963 |
+| 256 wide-exponent floats | 8.532 | 15.962 | 22.669 |
+| 64-byte ASCII text | 0.117 | 0.231 | 0.171 |
+| 8 KiB sparse escapes | 1.583 | 2.637 | 3.311 |
+| 8 KiB ASCII text | 1.199 | 1.907 | 2.275 |
+| Dense escapes / Unicode | 14.479 | 24.369 | 26.196 |
+| 16 reversed fields | 0.436 | 1.017 | 0.833 |
 
 </details>
 
@@ -98,19 +98,19 @@ corpus does not establish a reliable cross-library ranking.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.055 | 0.077 | 0.057 |
-| Escaped / Unicode | 0.105 | 0.168 | 0.100 |
-| 1,024 nonnegative integers | 6.105 | 10.690 | 9.370 |
-| 1,024 signed small integers | 6.157 | 9.187 | 9.250 |
-| 1,024 wide integers | 16.843 | 19.163 | 17.351 |
-| Mixed event | 2.770 | 3.213 | 2.573 |
-| 256 simple floats | 11.517 | 17.743 | 10.103 |
-| 256 wide-exponent floats | 12.011 | 16.317 | 9.600 |
-| 64-byte ASCII text | 0.051 | 0.147 | 0.108 |
-| 8 KiB sparse escapes | 1.994 | 0.728 | 5.947 |
-| 8 KiB ASCII text | 0.833 | 0.709 | 5.247 |
-| Dense escapes / Unicode | 11.575 | 8.545 | 10.491 |
-| 16 reversed fields | 0.176 | 0.449 | 0.469 |
+| Small record | 0.051 | 0.065 | 0.056 |
+| Escaped / Unicode | 0.109 | 0.110 | 0.077 |
+| 1,024 nonnegative integers | 6.149 | 9.756 | 8.341 |
+| 1,024 signed small integers | 5.196 | 6.738 | 6.482 |
+| 1,024 wide integers | 15.424 | 16.748 | 16.735 |
+| Mixed event | 2.688 | 3.197 | 2.476 |
+| 256 simple floats | 10.818 | 14.677 | 8.967 |
+| 256 wide-exponent floats | 12.070 | 17.592 | 9.719 |
+| 64-byte ASCII text | 0.050 | 0.155 | 0.115 |
+| 8 KiB sparse escapes | 1.512 | 0.743 | 5.720 |
+| 8 KiB ASCII text | 0.743 | 0.711 | 5.514 |
+| Dense escapes / Unicode | 11.859 | 8.927 | 10.454 |
+| 16 reversed fields | 0.152 | 0.463 | 0.400 |
 
 </details>
 

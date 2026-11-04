@@ -1,0 +1,39 @@
+{
+  "scope": "Separate instrumented encode-only public typed-API profiles; never used as benchmark latency or achievable speedup",
+  "codec_revision": "52473a635952b12eddbb78b4d241b24d3d9f0b21",
+  "entry_sha256": "954858a2c7a4fad5349cd0518c04fa63560be3eae874cabcef1e3b1e4b924163",
+  "codec_sha256": "0dfc7f2cded9501bd7f56c274412b6fc0910afa80a10ab8cdf8bf88c65e8b090",
+  "binary_sha256": "4a6daf0d5883fc92ead3a5a13042d194b052aa1db1c416cde25eefb469c6cdb6",
+  "goose_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "goose_flags": "-O2 --standalone",
+  "c_flags": "-pg -g -fno-omit-frame-pointer -march=native (Goose release optimization)",
+  "native_cxx_flags": "-pg -g -fno-omit-frame-pointer -march=native -O3 -DNDEBUG",
+  "affinity_cpu": 3,
+  "host": "Shared, nonexclusive; frequency/turbo not fixed. Profiling starts after all timing processes finish.",
+  "profiler": "GNU gprof (GNU Binutils) 2.47",
+  "sampling_interval_seconds": 0.01,
+  "runs": {
+    "floats": {
+      "iterations": 500000,
+      "output_checksum": 815226603,
+      "flat_profile": "profile-floats.txt"
+    },
+    "floats-wide": {
+      "iterations": 500000,
+      "output_checksum": 2957756130,
+      "flat_profile": "profile-floats-wide.txt"
+    },
+    "text-sparse": {
+      "iterations": 2000000,
+      "output_checksum": 16666910292,
+      "flat_profile": "profile-text-sparse.txt"
+    },
+    "text-escaped": {
+      "iterations": 250000,
+      "output_checksum": 2214459153,
+      "flat_profile": "profile-text-escaped.txt"
+    }
+  },
+  "source_hashes_reference": "recording/metadata.json",
+  "text_export_normalization": "Trailing whitespace removed; all rows and numerical values retained"
+}

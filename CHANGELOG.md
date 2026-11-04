@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - Convert wide signed integers using bounded eight-digit blocks on GCC/Clang;
   preserve canonical output, the existing adapter capacity contract and runtime
