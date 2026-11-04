@@ -207,7 +207,7 @@ fn test_text_encoding() {
     // The fused writer must preserve standard JSON escaping byte-for-byte.
     for byte in 128 {
         var value = json_codec::Text { bytes: [] };
-        value.bytes.append("abcdefghijklmnopqrstuvwxyz0123456789");
+        value.bytes.append("abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789");
         value.bytes.push(byte as! u8);
         value.bytes.append("é😀\n\"\\");
         var expected: u8[>..] = [];
@@ -297,9 +297,15 @@ fn test_text_chunk_boundaries() {
         for i in 4090 + offset { value.bytes.push('a'); }
         value.bytes.append("\n\"\\é😀");
         let text, error = json_codec::serialize(value);
-        assert(error.len == 0);
+        var expected: u8[>..] = [];
+        json::format_string(expected, value.bytes);
+        assert(error.len == 0 && text[..] == expected[..]);
         var back = json_codec::Text { bytes: [] };
         assert(json_codec::deserialize_into(text, back).len == 0 && back.bytes[..] == value.bytes[..]);
+        // Prefix reuse must not skip invalid bytes after the first escape.
+        value.bytes.push(0xff);
+        let invalid, invalid_error = json_codec::serialize(value);
+        assert(invalid.len == 0 && invalid_error.len > 0);
     }
 }
 
