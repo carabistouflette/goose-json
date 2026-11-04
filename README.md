@@ -38,26 +38,39 @@ Floating-point tokens are limited to 128 bytes (`MAX_NUMBER_BYTES`) before the u
 
 ## Benchmarks
 
-Native, owned-result JSON operations. Median ns/op, **decode / encode**, lower is better; median of three repeated process passes on one Core Ultra 7 258V. Both GCC and Rust enable native CPU instructions. The expanded corpus includes floats, long strings and reverse-order fields, with safe SIMD `sonic-rs` as a baseline.
+Owned-result JSON operations. Median ns/op, **decode / encode**, lower is better;
+median of three shuffled process passes on one Core Ultra 7 258V. GCC, C++ and
+Rust enable native CPU instructions. All fixtures and slower cases are shown.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 117.8 / 42.2 | 172.3 / 74.0 | 188.7 / 71.3 |
-| Escaped / Unicode | 244.2 / 104.6 | 306.5 / 147.9 | 315.0 / 95.7 |
-| 1,024 integers | 10,806.0 / 6,311.6 | 17,916.6 / 8,000.2 | 15,570.8 / 8,458.9 |
-| 256 floats | 6,515.2 / 30,555.0 | 7,399.4 / 10,941.8 | 7,425.5 / 10,287.3 |
-| 8 KiB ASCII text | 6,826.2 / 5,348.5 | 1,081.4 / 565.9 | 2,285.4 / 4,718.7 |
-| Dense escapes / Unicode | 37,819.8 / 34,576.8 | 13,574.4 / 8,523.6 | 23,999.5 / 13,981.8 |
-| 16 reversed fields | 843.2 / 195.5 | 958.8 / 424.5 | 1,520.4 / 419.9 |
+| Small record | 108.9 / 42.1 | 165.2 / 69.1 | 157.1 / 69.5 |
+| Escaped / Unicode | 201.7 / 100.2 | 308.5 / 146.6 | 305.2 / 95.4 |
+| 1,024 integers | 9,082.5 / 5,448.0 | 16,972.1 / 8,004.5 | 14,654.1 / 7,933.4 |
+| 256 simple floats | 4,896.6 / 9,850.3 | 7,017.7 / 11,733.7 | 7,001.6 / 9,851.4 |
+| 256 wide-exponent floats | 8,086.1 / 11,438.8 | 15,938.0 / 9,745.9 | 22,177.4 / 10,553.3 |
+| 8 KiB ASCII text | 901.8 / 803.5 | 1,079.2 / 555.5 | 2,232.5 / 4,641.4 |
+| Dense escapes / Unicode | 12,250.6 / 9,834.3 | 12,998.4 / 8,373.2 | 22,558.1 / 13,296.7 |
+| 16 reversed fields | 742.5 / 203.7 | 934.2 / 408.9 | 1,510.7 / 407.4 |
 
-The changes improve ASCII text and integer decoding; they do not establish a universal lead. Sonic is faster on long strings, floating-point encoding remains slower, and integer-array encoding regressed in these runs. Full ranges, complete batch data, resource/ownership differences and separate Protobuf/DOM results are [documented](bench/README.md).
+This candidate has the lowest measured decoding median in all eight fixtures
+among these three implementations. That is a result on this corpus and machine,
+not a universal ranking. Relative to the previous codec in the same run set,
+wide-exponent float encoding improves from 1.07 ms to 11.4 µs (about 94×), ASCII
+decoding improves about 7.2×, and dense escaped-text encoding improves about 3.3×.
+Sonic still leads ASCII and dense-text encoding and wide-exponent float encoding;
+serde leads small escaped-record encoding. Wide-record encoding regressed versus
+the previous codec. Full ranges, all batch samples and separate Protobuf/DOM
+results are [documented](bench/README.md).
 
 ```sh
 make bench-native
-python3 bench/measure.py --native --cpu 0 --iterations 200000 --runs 3 --output .build/reproduce-01
+python3 bench/measure.py --native --cpu 0 --iterations 200000 --runs 3 \
+  --baseline d59c5f3ce8eeb03e5ce25178082f86d08ac15d17 --output .build/reproduce-01
 ```
 
-See [benchmark setup and methodology](bench/README.md). CI checks execution and correctness, never noisy timing thresholds.
+See [benchmark setup and methodology](bench/README.md). CI checks correctness,
+ASan/UBSan with both GCC and Clang, and benchmark execution; it has no timing thresholds.
 
 ## Development
 
