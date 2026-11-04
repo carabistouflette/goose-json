@@ -60,7 +60,14 @@ fn validate_fixture(name: u8[:], value: Item&) {
     else if name == "escaped" { assert(value.name.bytes == "Goose\n\"東京\"😀"); }
     else {
         var expected: u8[>..] = [];
-        if name == "text-ascii" { for i in 1024 { expected.append("abcdefgh"); } }
+        if name == "text-short" { for i in 8 { expected.append("abcdefgh"); } }
+        else if name == "text-ascii" || name == "text-sparse" {
+            for i in 1024 { expected.append("abcdefgh"); }
+            if name == "text-sparse" {
+                expected[1023] = '\n'; expected[4095] = '"';
+                expected.append("é😀");
+            }
+        }
         else { for i in 512 { expected.append("abc\n\"\\\té😀"); } }
         assert(value.name.bytes[..] == expected[..]);
     }
@@ -173,6 +180,8 @@ fn main() {
     benchmark<Numbers>("array", max(1, count / 10));
     benchmark<Floats>("floats", max(1, count / 100));
     benchmark<Floats>("floats-wide", max(1, count / 100));
+    benchmark<Item>("text-short", count);
+    benchmark<Item>("text-sparse", max(1, count / 100));
     benchmark<Item>("text-ascii", max(1, count / 100));
     benchmark<Item>("text-escaped", max(1, count / 100));
     benchmark<Wide>("wide", max(1, count / 5));
