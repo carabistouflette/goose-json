@@ -40,7 +40,8 @@ fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
 }
 
 fn read(r: json::Reader&, value: Text&) {
-    if native_available() {
+    // Small records avoid native call and chunk-buffer setup costs.
+    if native_available() && r.text.len - r.pos >= 128 {
         if json::peek(r) != '"' { json::fail(r, "expected a string"); return; }
         let start = r.pos + 1;
         var end = start;
