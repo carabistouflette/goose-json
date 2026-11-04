@@ -146,3 +146,52 @@ the separate incremental switch; that small hardening was added and verified
 afterward. This does not sandbox compiler wrappers or every package-specific
 Cargo setting. No new timing comparison or library ranking follows from these
 smoke tests. Previously recorded data and immutable releases are unchanged.
+
+## Consumer formatting isolation
+
+The pre-fix codec allowed application `format` overloads to erase its error
+text (including the nonempty-error failure signal), replace integer output,
+and alter portable float digits/exponents. The fix constructs diagnostics with
+byte operations and owns JSON number layout. Bounded adapters use the pinned
+Goose runtime's numeric primitives without hook lookup. Native float kernels
+are unchanged. Common nonnegative integers below 10,000 use direct digits;
+larger/negative integers use the bounded runtime fallback.
+
+`tests/formatting.goose` installs no-op consumer overloads for strings, signed
+and unsigned integers, floats and booleans. It checks malformed/schema/range/
+UTF-8/resource-limit errors, byte offsets, empty serialization output on errors,
+integer limits, float spelling/bit roundtrips, every direct-digit value and its
+boundaries, and short/byte-offset runtime buffers. Normal/debug runner and
+compiled suites pass. `make test-portable` adds compiled debug portable mode
+and standalone runtime linkage.
+
+The final source passed a 44,586-line byte differential against the pre-fix,
+hook-free baseline in TinyCC release/debug, GCC portable/native and Clang debug
+portable modes. The same output matched under Clang ASan/UBSan with portable
+formatting. Generated Goose C, pinned runtime and the production C++ library
+were instrumented in a fresh cache; normal and portable consumer suites and the
+public codec suite passed with sanitizer errors fatal.
+
+An independent GPT-6.1 Sol ultra combined review found no blockers in the
+diagnostic/numeric fix before the small integer fast path. It compared 52,796
+lines in six backend configurations and independently verified 48,572 float
+bit roundtrips and 4,103 integer roundtrips. ABI probes checked short buffers,
+16 alignments, canaries and 10,000 numeric patterns under ASan/UBSan. A focused final
+Sol ultra review also found no blockers in the direct-digit path and portable CI.
+Its independent Python oracle matched 30,047 output lines across four build
+configurations, including every fast-path value, struct/array output, integer
+limits and diagnostic offsets crossing 10,000. It independently ran all maintained
+normal/debug/portable targets and checked standalone/separate-runtime linkage.
+Reviewed final `json_codec.goose` SHA256:
+`bf8ed4ef1b7258df3dde3172e5a98606dfc86d17e29483a57f1111ee4dae67ca`.
+
+A fresh full recorder run measured source
+`ca9b0dce42061c38e72d05233ee229874dc5b682` against public baseline
+`0c26308570cbe2c6769c1bf0eba8d86e7e8ad681`, with pinned Rust JSON/Protobuf
+comparisons, native CPU tuning and CPU 4 affinity. All nine shuffled process
+outputs and 2,520 batch averages are retained in the
+[formatter recording](../bench/results/formatter-native-2026-11-04). The README
+tables use every pass. This shared host had no core reservation or fixed
+frequency; observed slower cases are reported alongside improvements. No
+universal performance ranking or security certification follows. Earlier
+exploratory scratch/in-place variants were not substituted into this recording.

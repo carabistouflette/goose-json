@@ -11,8 +11,8 @@ make setup
 make bench                         # default-CPU GCC/C++ build, Goose only
 make bench-compare                 # also serde_json, sonic-rs, and binary Protobuf
 make bench-native                  # native CPU instructions for Goose/GCC AND Rust
-python3 bench/measure.py --native --cpu 0 --iterations 200000 --runs 3 \
-  --baseline ce1f8066fd18de466cc78800202452b7d0fcd9c0 --output .build/reproduce-01
+python3 bench/measure.py --native --cpu 4 --iterations 200000 --runs 3 \
+  --baseline 0c26308570cbe2c6769c1bf0eba8d86e7e8ad681 --output .build/reproduce-01
 ```
 
 Alternatively pass `GOOSE=/absolute/path/to/goose` to Make, or `--goose /absolute/path/to/goose` to the Python runner. Goose setup needs CMake and a C/C++ toolchain; comparisons additionally need Cargo/Rust. The recorder uses only Python's standard library; CPU pinning needs Linux `taskset` and an allowed CPU index. Omit `--cpu` on other systems. Use a fresh output directory outside `native/`: existing data is never overwritten. A full Git clone is needed for the baseline commit, or fetch that commit before measuring.
@@ -59,128 +59,114 @@ CI exercises portable comparisons and a native recorder smoke run with tiny coun
 
 ## Recorded native results
 
-Measured 2026-11-04 on an Intel Core Ultra 7 258V, CPU 2, Linux x86-64;
-GCC/G++ 16.2.1, Rust 1.101.0-nightly and Goose
+Measured 2026-11-04 on an Intel Core Ultra 7 258V, CPU 4, Linux x86-64;
+GCC/G++ 16.2.1, Rust 1.101.0-nightly and pinned Goose
 `eadca409f68210893f366e60d0c2f0dc29a339be`. Each process requested 200,000
-iterations, with fixture-specific divisors described above. Full provenance is
-in [metadata.json](results/sparse-native-2026-11-04/metadata.json).
+iterations, with fixture-specific divisors above. Candidate:
+`ca9b0dce42061c38e72d05233ee229874dc5b682`; baseline:
+`0c26308570cbe2c6769c1bf0eba8d86e7e8ad681`. This measures the formatter-isolation
+fix, including the small-integer path, against the previous public codec.
+See [full provenance](results/formatter-native-2026-11-04/metadata.json).
 
-Measured candidate: `6fad097cef35c0623b45e96e84246de6b0a64a70`. Baseline: `ce1f8066fd18de466cc78800202452b7d0fcd9c0`.
-Later documentation and test/CI changes do not alter the measured codec. The
-Makefile has since gained a debug-test target; its benchmark targets and flags
-are unchanged. Both measured builds use
-the same controlled environment, fresh native cache and release flags; sanitizer
-and fuzz instrumentation are disabled.
+Both Goose revisions use the same harness, fresh native cache and controlled
+release flags. Rust's requested release configuration and observed executable
+profile are recorded separately; optimization is 3, assertions/overflow checks
+are off, and incremental compilation is disabled. No sanitizers are enabled.
 
-A later Unicode-decoder cleanup and native contract comments produced
-byte-identical native objects with GCC and Clang in default and native Release
-profiles; see the [maintainability checks](../docs/validation.md#maintainability-cleanup).
-The timings here still refer to the measured commit above.
-
-The later recorder profile audit fixed inherited Cargo settings that could
-silently change future comparison builds. All six historical recordings with
-Cargo profile metadata report optimization 3 with assertions/overflow checks off.
-Earlier records do not contain the new full requested-profile field; they remain
-unchanged historical measurements, not reruns under the newer recorder.
-
-The previous SQLite matched series completed before this CPU 2 window began.
-Sibling owners agreed to keep new heavy jobs off CPU 2; other-core validation
-continued. Our fuzzing and independent review had finished before timing.
-This was best-effort coordination on a shared desktop host, not exclusive core
-or machine isolation. CPU frequency/turbo were not fixed. Per-process child CPU
-time was 95.2–99.8% of wall time. That diagnostic does not normalize or correct
-ns/op and does not establish statistical significance.
+This was a shared desktop host without a reserved core. Timed children were
+pinned to CPU 4; an independent review used CPU 5 and other work could continue.
+CPU frequency/turbo were not fixed. Child CPU time was
+99.0–99.7% of wall time; this is a scheduling diagnostic,
+not a correction or evidence of statistical significance. Do not compare absolute
+numbers across this recording and the older CPU 2 series as a codec speedup.
 
 ### Decode
 
-Median ns/op across three process-pass medians; lower is better.
+Median ns/op across all three process-pass medians; lower is better.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 115.8 | 175.7 | 158.6 |
-| Escaped / Unicode | 214.5 | 301.0 | 312.8 |
-| 1,024 integers | 9,274.1 | 16,875.3 | 14,617.7 |
-| 256 simple floats | 4,480.1 | 7,114.3 | 7,054.3 |
-| 256 wide-exponent floats | 8,251.9 | 15,545.0 | 22,114.7 |
-| 64-byte ASCII text | 112.8 | 197.0 | 181.0 |
-| 8 KiB sparse escapes | 1,075.9 | 1,574.6 | 2,784.4 |
-| 8 KiB ASCII text | 847.5 | 1,096.4 | 2,200.0 |
-| Dense escapes / Unicode | 12,634.4 | 12,930.8 | 23,584.2 |
-| 16 reversed fields | 765.2 | 948.9 | 1,484.4 |
+| Small record | 73.0 | 178.6 | 105.3 |
+| Escaped / Unicode | 140.0 | 293.9 | 209.2 |
+| 1,024 integers | 9,410.1 | 18,665.4 | 12,954.9 |
+| 256 simple floats | 3,312.5 | 5,436.0 | 5,172.5 |
+| 256 wide-exponent floats | 6,191.4 | 10,511.1 | 15,091.3 |
+| 64-byte ASCII text | 80.6 | 129.2 | 110.4 |
+| 8 KiB sparse escapes | 1,430.7 | 1,623.9 | 2,188.6 |
+| 8 KiB ASCII text | 885.9 | 1,154.1 | 1,574.6 |
+| Dense escapes / Unicode | 10,136.6 | 14,946.3 | 19,276.3 |
+| 16 reversed fields | 332.4 | 665.9 | 525.3 |
 
 ### Encode
 
-Median ns/op across three process-pass medians; lower is better.
+Median ns/op across all three process-pass medians; lower is better.
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 42.5 | 75.0 | 73.3 |
-| Escaped / Unicode | 97.2 | 143.0 | 92.3 |
-| 1,024 integers | 5,391.7 | 7,793.6 | 7,812.6 |
-| 256 simple floats | 9,452.4 | 10,275.3 | 9,721.9 |
-| 256 wide-exponent floats | 10,550.6 | 10,206.8 | 9,572.4 |
-| 64-byte ASCII text | 42.6 | 134.6 | 129.3 |
-| 8 KiB sparse escapes | 950.9 | 634.1 | 4,811.1 |
-| 8 KiB ASCII text | 492.1 | 537.4 | 4,580.9 |
-| Dense escapes / Unicode | 9,671.5 | 8,368.2 | 12,099.2 |
-| 16 reversed fields | 183.4 | 403.4 | 404.3 |
+| Small record | 36.7 | 53.7 | 51.5 |
+| Escaped / Unicode | 69.6 | 113.2 | 64.2 |
+| 1,024 integers | 4,392.1 | 6,915.4 | 6,338.4 |
+| 256 simple floats | 7,548.8 | 9,869.5 | 6,238.3 |
+| 256 wide-exponent floats | 8,548.9 | 11,083.7 | 6,253.9 |
+| 64-byte ASCII text | 35.6 | 97.4 | 85.4 |
+| 8 KiB sparse escapes | 1,272.6 | 469.3 | 6,691.4 |
+| 8 KiB ASCII text | 566.4 | 455.4 | 6,437.6 |
+| Dense escapes / Unicode | 7,808.8 | 5,633.0 | 9,054.0 |
+| 16 reversed fields | 117.1 | 297.8 | 296.5 |
 
 ### Matched changes
 
-Previous native codec → candidate, ns/op. All ten fixtures are included.
+Previous public codec → candidate, ns/op. All ten fixtures and both operations are retained.
 
 | Fixture | Decode before → after | Encode before → after |
-| --- | ---: | ---: |
-| Small record | 111.2 → 115.8 | 43.0 → 42.5 |
-| Escaped / Unicode | 196.1 → 214.5 | 93.9 → 97.2 |
-| 1,024 integers | 9,350.3 → 9,274.1 | 5,525.3 → 5,391.7 |
-| 256 simple floats | 5,067.6 → 4,480.1 | 10,717.2 → 9,452.4 |
-| 256 wide-exponent floats | 8,522.6 → 8,251.9 | 11,005.2 → 10,550.6 |
-| 64-byte ASCII text | 116.2 → 112.8 | 44.2 → 42.6 |
-| 8 KiB sparse escapes | 2,318.2 → 1,075.9 | 1,927.7 → 950.9 |
-| 8 KiB ASCII text | 844.0 → 847.5 | 499.5 → 492.1 |
-| Dense escapes / Unicode | 12,803.8 → 12,634.4 | 9,625.6 → 9,671.5 |
-| 16 reversed fields | 785.4 → 765.2 | 187.8 → 183.4 |
+| --- | ---: | ---: | ---: |
+| Small record | 93.0 → 73.0 | 33.3 → 36.7 |
+| Escaped / Unicode | 136.1 → 140.0 | 68.3 → 69.6 |
+| 1,024 integers | 9,268.8 → 9,410.1 | 4,325.1 → 4,392.1 |
+| 256 simple floats | 3,490.7 → 3,312.5 | 7,833.8 → 7,548.8 |
+| 256 wide-exponent floats | 5,904.4 → 6,191.4 | 8,007.7 → 8,548.9 |
+| 64-byte ASCII text | 71.2 → 80.6 | 30.7 → 35.6 |
+| 8 KiB sparse escapes | 1,401.3 → 1,430.7 | 1,220.2 → 1,272.6 |
+| 8 KiB ASCII text | 864.9 → 885.9 | 547.0 → 566.4 |
+| Dense escapes / Unicode | 9,865.4 → 10,136.6 | 7,122.9 → 7,808.8 |
+| 16 reversed fields | 282.8 → 332.4 | 162.5 → 117.1 |
 
-Sparse-text decoding takes about 53.6% less time and encoding about
-50.7% less time in these medians. Plain spans between escapes are coalesced into
-bounded scans and copies instead of copying each 32-byte block separately.
-A local decimal-conversion helper preserves the existing C ABI and Dragonbox
-policies. Simple-float encoding takes about 11.8% less time here.
-UTF-8 validation, buffer bounds, numeric spelling and ownership are unchanged.
-
-Small escaped-record decoding is 9.4% slower (196.1 → 214.5 ns/op), and
-encoding 3.5% slower. Small-record decoding is 4.1% slower; dense-text encoding
-is 0.5% slower. All regressions are visible in the matched table, including
-operations whose production path did not change. Small differences can reflect run/batch noise,
-code layout, scheduling or frequency changes. Competitor results remain
-workload-dependent; the tables support neither a universal ranking nor a
-statistical-significance claim. See all raw samples before interpreting close
-results.
+Wide-record encoding takes about 27.9% less time in these medians. Integer-array
+encoding is 1.5% slower; small-record encoding is 10.2% slower, short-text encoding
+16.0% slower, wide-float encoding 6.8% slower and dense-text encoding 9.6% slower.
+These regressions remain visible alongside improvements. The native float and
+string kernels did not change, but whole-program code layout and shared-host
+frequency/cache effects can affect API timings. Close results can overlap; no
+universal ranking, production-latency or statistical-significance claim follows.
 
 ### Different APIs and formats
 
-Binary Protobuf and borrowing DOM results below are separate comparisons, not
-like-for-like typed JSON implementations. Their semantics are described above.
+Binary Protobuf and borrowing DOM use different formats/contracts; these are
+separate comparisons, not like-for-like typed JSON implementations.
 
 | Fixture | JSON / Protobuf input bytes | Protobuf decode / encode | Borrowing DOM decode |
 | --- | ---: | ---: | ---: |
-| Small record | 38 / 11 | 60.2 / 39.7 | 115.3 |
-| Escaped / Unicode | 62 / 24 | 68.6 / 34.6 | 155.3 |
-| 1,024 integers | 4022 / 1923 | 4,424.6 / 6,965.4 | 23,715.3 |
-| 256 simple floats | 1581 / 2051 | 859.8 / 582.0 | 6,277.7 |
-| 256 wide-exponent floats | 5975 / 2051 | 850.9 / 546.9 | 16,941.4 |
-| 64-byte ASCII text | 97 / 70 | 61.5 / 40.6 | 171.8 |
-| 8 KiB sparse escapes | 8233 / 8205 | 521.5 / 183.0 | 14,462.1 |
-| 8 KiB ASCII text | 8225 / 8199 | 543.4 / 183.6 | 7,052.6 |
-| Dense escapes / Unicode | 8737 / 6663 | 8,260.5 / 157.9 | 14,302.7 |
-| 16 reversed fields | 135 / 31 | 133.8 / 144.0 | 425.9 |
+| Small record | 38 / 11 | 39.3 / 22.8 | 57.9 |
+| Escaped / Unicode | 62 / 24 | 48.3 / 22.2 | 98.9 |
+| 1,024 integers | 4022 / 1923 | 2,993.9 / 5,930.4 | 12,900.9 |
+| 256 simple floats | 1581 / 2051 | 520.9 / 276.8 | 3,312.0 |
+| 256 wide-exponent floats | 5975 / 2051 | 529.9 / 283.0 | 11,364.6 |
+| 64-byte ASCII text | 97 / 70 | 39.8 / 22.9 | 91.8 |
+| 8 KiB sparse escapes | 8233 / 8205 | 478.3 / 241.8 | 10,508.5 |
+| 8 KiB ASCII text | 8225 / 8199 | 471.1 / 242.5 | 5,068.1 |
+| Dense escapes / Unicode | 8737 / 6663 | 5,490.6 / 214.8 | 13,056.2 |
+| 16 reversed fields | 135 / 31 | 99.3 / 93.0 | 269.1 |
 
 ## Raw data and history
 
-The [sparse-run recording](results/sparse-native-2026-11-04) contains all nine
-process outputs and metadata, retaining every batch sample. All three passes
-contribute to the tables; individual fastest batches are not selected.
+The [formatter-isolation recording](results/formatter-native-2026-11-04) contains
+all nine process outputs and metadata, retaining all 2,520 batch averages across
+all APIs/revisions. All three passes contribute to the tables; individual fastest
+batches are not selected.
+
+The [historical sparse-run recording](results/sparse-native-2026-11-04) retains
+its original raw data, matched-change narrative and tables. It measured `6fad097`
+against `ce1f806` on CPU 2; it is not a rerun of the formatter fix.
 
 The [previous validated recording](results/validated-native-2026-11-04) measured
 `f640912` against `493723f`, including bounded scan and dense-text improvements.
