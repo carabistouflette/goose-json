@@ -240,3 +240,30 @@ are integer conversion/copying, native float digit/layout work and string
 escaping/validation. Source, flags, hashes, checksums, reproduction steps and all
 flat-profile exports are retained. Instrumentation changes costs and inlining;
 profile distributions are not latency estimates or achievable-speedup claims.
+
+## Portable float carry correction
+
+The final signed-integer review uncovered a separate pre-existing portable-mode
+abort for either sign of `9.999999999999998e36` on the published baseline. A
+15-digit carry could change scale -22 to -23 and then index `POW10[23]`, beyond
+its 23 elements. The correction uses the existing runtime-digit fallback before
+that decrement at the lower bound. Other carry positions retain their previous
+behavior. Exact-byte/bit regressions for both signs run under hostile format hooks.
+
+The carry correction was independently reviewed alongside a separate integer
+experiment. The whole corrected float routine is byte-identical in corrective
+commit `e91a5ccf910b1910934e8c1b9a245d9449581c65`;
+the integer writer matches the published `a6073f4` baseline. The corrective
+branch has separate normal/debug, portable/standalone and sanitizer regression
+validation. Optional integer experiments do not gate this repair. The fixed
+`v0.1.1` tag is preserved. Native-format benchmark tables remain historical
+measurements of their stated source revisions; no new speedup claim is made.
+
+The independent Sol 6.1 ultra review found no correctness/standards blockers.
+Its Python/reference oracle passed 71,158 cases per mode in seven modes:
+24,247 integers, 46,846 finite floats, fourteen arrays and 51 exact diagnostics.
+It covered decimal powers and neighboring values, dense carry/layout boundaries,
+signed zeros, i64 limits, hostile hooks and offsets through byte 1,048,575.
+Generated/runtime C passed standalone portable ASan/UBSan. The reviewer separately
+reproduced the baseline abort and verified canonical spelling and exact bits
+for both repaired inputs. No unchanged native fuzz/SIMD audit was repeated.

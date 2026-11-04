@@ -10,7 +10,7 @@ struct definition; decoded strings and arrays own their storage.
 Save this as `main.goose` and run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@ca9b0dce42061c38e72d05233ee229874dc5b682";
+import json_codec from "carabistouflette/goose-json@e91a5ccf910b1910934e8c1b9a245d9449581c65";
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 
@@ -66,8 +66,9 @@ libraries. Binary Protobuf and borrowing DOM results have separate contracts.
 
 Times are **microseconds per operation**, lower is better: medians of three
 process passes on a Core Ultra 7 258V, CPU 4, with native CPU tuning. This is a
-shared-host synthetic corpus; close timings can overlap. The expanded harness
-is measured against fixed `v0.1.1`, with identical production codec sources.
+shared-host synthetic corpus; close timings can overlap. These tables measure
+the expanded harness against fixed `v0.1.1`, with identical codec sources in
+that recording. The later portable-float correction has no new timing claims.
 [Provenance and profiles](bench/results/corpus-native-2026-11-04) are retained.
 
 <details>
