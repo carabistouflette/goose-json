@@ -10,7 +10,7 @@ struct definition; decoded strings and arrays own their storage.
 Save this as `main.goose` and run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@27145a16f4ea2dc61c037d5eaaa7311db7bd9d83";
+import json_codec from "carabistouflette/goose-json@f6409122724d371e679ccd5cc27ea842097f895b";
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
 
@@ -33,6 +33,7 @@ Output:
 
 **Requirements:** Goose ([tested compiler](GOOSE_REVISION)), CMake and a C++17
 compiler with its runtime. These build dependencies also apply to `goose run`.
+Tested on Linux x86-64 with GCC and Clang; other platforms are unverified.
 The API is experimental; the example pins a published commit.
 
 ## Supported types
@@ -58,43 +59,47 @@ scalars and arrays, use `deserialize_into(input, destination)`.
 
 ## Performance
 
-goose-json recorded the lowest decoding median in all eight fixtures against
-sonic-rs and serde_json on the tested machine. Encoding results vary: Sonic leads
-on long text and wide-exponent floats; serde leads on the small escaped record.
+The latest matched run reduced 8 KiB ASCII encoding time by about 22% compared
+with the previous codec. Results vary by workload: sparse-text handling and some
+encoding cases remain faster in the compared libraries.
 
 Times below are **microseconds per operation**, lower is better. These are
 medians from three process passes on a Core Ultra 7 258V with native CPU tuning.
 They describe this corpus and machine; close timings can overlap.
 
 <details>
-<summary>Decode timings — all eight fixtures</summary>
+<summary>Decode timings — all ten fixtures</summary>
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.109 | 0.165 | 0.157 |
-| Escaped / Unicode | 0.202 | 0.308 | 0.305 |
-| 1,024 integers | 9.082 | 16.972 | 14.654 |
-| 256 simple floats | 4.897 | 7.018 | 7.002 |
-| 256 wide-exponent floats | 8.086 | 15.938 | 22.177 |
-| 8 KiB ASCII text | 0.902 | 1.079 | 2.232 |
-| Dense escapes / Unicode | 12.251 | 12.998 | 22.558 |
-| 16 reversed fields | 0.743 | 0.934 | 1.511 |
+| Small record | 0.115 | 0.170 | 0.162 |
+| Escaped / Unicode | 0.214 | 0.315 | 0.302 |
+| 1,024 integers | 9.595 | 17.182 | 14.827 |
+| 256 simple floats | 4.955 | 7.199 | 7.135 |
+| 256 wide-exponent floats | 8.659 | 15.915 | 22.187 |
+| 64-byte ASCII text | 0.116 | 0.189 | 0.175 |
+| 8 KiB sparse escapes | 2.389 | 1.584 | 2.764 |
+| 8 KiB ASCII text | 0.859 | 1.065 | 2.184 |
+| Dense escapes / Unicode | 13.222 | 13.078 | 22.557 |
+| 16 reversed fields | 0.794 | 0.920 | 1.501 |
 
 </details>
 
 <details>
-<summary>Encode timings — all eight fixtures</summary>
+<summary>Encode timings — all ten fixtures</summary>
 
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 0.042 | 0.069 | 0.070 |
-| Escaped / Unicode | 0.100 | 0.147 | 0.095 |
-| 1,024 integers | 5.448 | 8.005 | 7.933 |
-| 256 simple floats | 9.850 | 11.734 | 9.851 |
-| 256 wide-exponent floats | 11.439 | 9.746 | 10.553 |
-| 8 KiB ASCII text | 0.803 | 0.555 | 4.641 |
-| Dense escapes / Unicode | 9.834 | 8.373 | 13.297 |
-| 16 reversed fields | 0.204 | 0.409 | 0.407 |
+| Small record | 0.044 | 0.072 | 0.070 |
+| Escaped / Unicode | 0.103 | 0.155 | 0.092 |
+| 1,024 integers | 5.888 | 7.963 | 7.879 |
+| 256 simple floats | 10.587 | 10.065 | 10.051 |
+| 256 wide-exponent floats | 11.007 | 9.628 | 8.927 |
+| 64-byte ASCII text | 0.043 | 0.133 | 0.127 |
+| 8 KiB sparse escapes | 1.995 | 0.635 | 4.808 |
+| 8 KiB ASCII text | 0.502 | 0.542 | 4.517 |
+| Dense escapes / Unicode | 9.803 | 8.411 | 12.290 |
+| 16 reversed fields | 0.193 | 0.401 | 0.404 |
 
 </details>
 
@@ -114,6 +119,10 @@ compiler, use `make GOOSE=/path/to/goose check test`.
 
 See [contribution guidelines](CONTRIBUTING.md) for commit conventions and checks,
 and [native build details](native/README.md) for dependencies and cache refreshes.
+The [validation record](docs/validation.md) describes the completed checks and
+independent reviews.
+
+Report vulnerabilities privately through the [security policy](SECURITY.md).
 
 ## License
 
