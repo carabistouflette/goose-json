@@ -123,6 +123,39 @@ static void strings() {
                 assert(decoded == text && at == (int64_t)wire.size());
             }
         }
+    // Sparse escapes cross both vector and output-chunk boundaries. Compare to
+    // a literal wire oracle, including bytes after the closing quote.
+    for (int length : {31, 32, 33, 127, 128, 129, 4095, 4096, 4097, 8192}) {
+        for (int offset : {0, length / 2, length - 1}) {
+            std::string prefix(offset, 'a'), suffix(length - offset, 'b');
+            std::string text = prefix + "\n\"\\é😀" + suffix;
+            std::string expected = prefix + R"(\n\"\\)" + "é😀" + suffix;
+            std::string wire = expected + "\"ignored";
+            for (int cap : {6, 31, 32, 33, 127, 128, 129, 4095, 4096, 4097, 8192}) {
+                std::vector<uint8_t> out(cap + 2, 0xa5);
+                int64_t at = 0;
+                std::string encoded, decoded;
+                while (at < (int64_t)text.size()) {
+                    auto before = at;
+                    auto n = gj_escape_chunk(span(text), at, {out.data() + 1, cap}, &at);
+                    assert(n >= 0 && n <= cap && at > before);
+                    assert(out.front() == 0xa5 && out.back() == 0xa5);
+                    encoded.append((char *)out.data() + 1, n);
+                }
+                assert(encoded == expected);
+                uint8_t done = 0;
+                at = 0;
+                while (!done) {
+                    auto before = at;
+                    auto n = gj_unquote(span(wire), at, {out.data() + 1, cap}, &at, &done);
+                    assert(n >= 0 && n <= cap && at > before);
+                    assert(out.front() == 0xa5 && out.back() == 0xa5);
+                    decoded.append((char *)out.data() + 1, n);
+                }
+                assert(decoded == text && at == (int64_t)expected.size() + 1);
+            }
+        }
+    }
     // A 32-byte block needs exactly 192 output bytes in the worst case.
     std::string controls(32, '\0');
     assert(gj_quote_prefix(span(controls)) == 0);

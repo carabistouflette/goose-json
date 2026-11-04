@@ -261,9 +261,15 @@ static inline int64_t gj_impl_escape_chunk(sl_u8 input, int64_t at, sl_u8 output
     while (i < n) {
         int64_t base = i, limit = n - i > 32 ? i + 32 : n;
         uint32_t mask = gj_specials(s + base, limit - base);
+        // Coalesce plain blocks into one bounded copy for sparse escapes.
+        // Scan only bytes that fit; the existing path handles smaller tails.
+        if (!mask && limit < n && cap - used >= limit - i) {
+            int64_t bound = n - i > cap - used ? i + (cap - used) : n;
+            limit = gj_ascii_run(s, bound, limit, 2);
+        }
         /* At most six output bytes per input byte, for at most 32 bytes.
            A whole-block proof leaves the original checks for the final chunk. */
-        const int room = cap - used >= 6 * (limit - i);
+        const int room = !mask || cap - used >= 6 * (limit - i);
         while (mask) {
             int64_t end = base + gj_first(mask);
             mask &= mask - 1;
@@ -349,6 +355,12 @@ static inline int64_t gj_impl_unquote(sl_u8 input, int64_t at, sl_u8 output, gs_
     while (i < n) {
         int64_t base = i, limit = n - i > 32 ? i + 32 : n;
         uint32_t mask = gj_specials(s + base, limit - base);
+        // Coalesce plain blocks into one bounded copy for sparse escapes.
+        // Scan only bytes that fit; the existing path handles smaller tails.
+        if (!mask && limit < n && cap - used >= limit - i) {
+            int64_t bound = n - i > cap - used ? i + (cap - used) : n;
+            limit = gj_ascii_run(s, bound, limit, 2);
+        }
         while (mask) {
             int64_t end = base + gj_first(mask);
             mask &= mask - 1;

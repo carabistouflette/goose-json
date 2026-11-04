@@ -13,12 +13,14 @@ extern "C" uint8_t gj_cpp_utf8(const char *data, size_t length) {
     return length == 0 || simdutf::validate_utf8(data, length);
 }
 // Caller checks finite, nonzero input; Dragonbox does not handle zero/NaN/Inf.
-extern "C" gj_decimal gj_cpp_decimal(double value) {
+static inline gj_decimal gj_decimal_value(double value) {
     const auto decimal = goose_json_dragonbox::dragonbox::to_decimal(
         value, goose_json_dragonbox::dragonbox::policy::sign::ignore,
         goose_json_dragonbox::dragonbox::policy::trailing_zero::remove);
     return {decimal.significand, decimal.exponent};
 }
+
+extern "C" gj_decimal gj_cpp_decimal(double value) { return gj_decimal_value(value); }
 
 // The upstream formatter has an optimized 17-digit path. Its scientific form
 // already matches ours except for E/e. Keep our fixed-point path for small values.
@@ -116,7 +118,7 @@ static inline int64_t gj_impl_number(double value, sl_u8 output) {
         decimal.mantissa = 0;
         decimal.exponent = 0;
     } else
-        decimal = gj_cpp_decimal(value);
+        decimal = gj_decimal_value(value);
     static const char pairs[] = "0001020304050607080910111213141516171819"
                                 "2021222324252627282930313233343536373839"
                                 "4041424344454647484950515253545556575859"
