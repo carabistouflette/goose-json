@@ -1,0 +1,51 @@
+{
+  "scope": "Separate -pg instrumented encode-only typed-API profiles; no latency or speedup claims",
+  "codec_revision": "fcae091cf89c1692b1e2d64891f645c862cc8844",
+  "affinity_cpu": 4,
+  "sampling_interval_seconds": 0.01,
+  "host": "shared, nonexclusive; frequency/turbo not fixed",
+  "goose_flags": "-O2 --standalone",
+  "c_flags": "-pg -g -fno-omit-frame-pointer -march=native, Goose release optimization",
+  "native_cxx_flags": "-pg -g -fno-omit-frame-pointer -march=native -O3 -DNDEBUG",
+  "profiler": "GNU gprof (GNU Binutils) 2.47",
+  "hardware_sampling": "perf stat worked; perf record events were denied; no host security settings changed",
+  "entry_sha256": "954858a2c7a4fad5349cd0518c04fa63560be3eae874cabcef1e3b1e4b924163",
+  "codec_sha256": "bf8ed4ef1b7258df3dde3172e5a98606dfc86d17e29483a57f1111ee4dae67ca",
+  "binary_sha256": "039ecf7bb5374ef1de15fcc8e9ddece7fd700f606c1cbcc052ee3c90e6a441c0",
+  "runs": {
+    "array-signed": {
+      "iterations": 250000,
+      "output_checksum": 1146724220,
+      "flat_profile": "profile-array-signed.txt"
+    },
+    "array-wide": {
+      "iterations": 200000,
+      "output_checksum": 3964167439,
+      "flat_profile": "profile-array-wide.txt"
+    },
+    "floats": {
+      "iterations": 250000,
+      "output_checksum": 407613550,
+      "flat_profile": "profile-floats.txt"
+    },
+    "floats-wide": {
+      "iterations": 250000,
+      "output_checksum": 1478878109,
+      "flat_profile": "profile-floats-wide.txt"
+    },
+    "text-sparse": {
+      "iterations": 2000000,
+      "output_checksum": 16666910292,
+      "flat_profile": "profile-text-sparse.txt"
+    },
+    "text-escaped": {
+      "iterations": 250000,
+      "output_checksum": 2214459153,
+      "flat_profile": "profile-text-escaped.txt"
+    }
+  },
+  "goose_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "gcc": "gcc (GCC) 16.2.1 20260810",
+  "g++": "g++ (GCC) 16.2.1 20260810",
+  "text_export_normalization": "Trailing whitespace removed; all rows and numerical values retained"
+}

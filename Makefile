@@ -7,6 +7,7 @@ GOOSE ?= .toolchain/goose/build/goose
 setup:
 	./scripts/setup-goose.sh
 check:
+	python3 bench/fixtures.py --check
 	python3 -m unittest discover -s tests -p 'test_*.py'
 	python3 scripts/native-manifest.py --check
 	"$(GOOSE)" format --check json_codec.goose native/runtime.goose examples tests bench
@@ -47,6 +48,7 @@ format:
 
 .PHONY: bench bench-build bench-compare
 bench-build:
+	python3 bench/fixtures.py --check
 	python3 scripts/native-manifest.py --check
 	mkdir -p .build
 	"$(GOOSE)" build bench/bench.goose --cc "$(BENCH_CC)" -O2 -o .build/bench

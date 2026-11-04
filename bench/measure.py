@@ -95,6 +95,32 @@ def comparison_artifact(output):
     raise RuntimeError("Cargo did not produce the goose-json-compare executable")
 
 
+def validate_decode_checksums(output, index):
+    """All typed decoders must consume the same values and iteration counts."""
+    expected = None
+    for label, implementations in (("before", ("goose-json",)),
+                                   ("after", ("goose-json",)),
+                                   ("compare", ("serde_json", "sonic-rs", "prost (binary)"))):
+        groups = {name: {} for name in implementations}
+        for line in (output / f"run-{index}-{label}.md").read_text().splitlines():
+            cells = [cell.strip() for cell in line.split("|")[1:-1]]
+            if not line.startswith("| ") or len(cells) != 8:
+                continue
+            implementation, fixture, operation = cells[:3]
+            if implementation not in groups or operation != "decode":
+                continue
+            if fixture in groups[implementation]:
+                raise RuntimeError(f"duplicate decode row: {label}/{implementation}/{fixture}")
+            groups[implementation][fixture] = (int(cells[4]), int(cells[7]))
+        for implementation, values in groups.items():
+            if not values:
+                raise RuntimeError(f"missing typed decode rows: {label}/{implementation}")
+            if expected is None:
+                expected = values
+            elif values != expected:
+                raise RuntimeError(f"typed decode checksum/iteration/fixture mismatch: {label}/{implementation}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--goose", default=os.environ.get("GOOSE", ".toolchain/goose/build/goose"))
@@ -119,6 +145,7 @@ def main():
     if any(output.iterdir()):
         parser.error("--output must be empty (preserve previous measurements)")
     run(["python3", "scripts/native-manifest.py", "--check"])
+    run(["python3", "bench/fixtures.py", "--check"])
     hashes = source_hashes(output)
     cc = str(ROOT / "bench/native-cc.sh") if args.native else "gcc"
     # An explicit profile avoids inheriting undisclosed Rust code-generation flags.
@@ -200,7 +227,12 @@ def main():
                 })
             if source_hashes(output) != hashes:
                 raise RuntimeError("sources changed during measurement; discard this measurement")
-            (output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
+            metadata["typed_decode_checksums"] = "failed"
+            try:
+                validate_decode_checksums(output, index)
+                metadata["typed_decode_checksums"] = "passed"
+            finally:
+                (output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
 
 if __name__ == "__main__":

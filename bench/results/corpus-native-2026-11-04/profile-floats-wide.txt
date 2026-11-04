@@ -1,0 +1,68 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total
+ time   seconds   seconds    calls  us/call  us/call  name
+ 76.44      1.46     1.46 64000256     0.02     0.03  _ZL14gj_impl_numberd5sl_u8
+ 19.90      1.84     0.38 61250245     0.01     0.01  _ZN20goose_json_dragonbox9dragonbox6detail8to_charsINS0_16ieee754_binary64EmEEPcT0_iS4_
+  1.57      1.87     0.03                             _init
+  0.52      1.88     0.01  2750011     0.00     0.00  _ZN20goose_json_dragonbox9dragonbox6detail4implINS0_21ieee754_binary_traitsINS0_16ieee754_binary64EmiEEE15compute_nearestINS0_6policy4sign8ignore_tENS8_13trailing_zero8remove_tENS8_26decimal_to_binary_rounding17nearest_to_even_tENS8_26binary_to_decimal_rounding9to_even_tENS8_5cache6full_tENS8_23preferred_integer_types7match_tEEENS0_10decimal_fpImNT4_21decimal_exponent_typeIS5_XcviclL_ZNS6_4min_EiiEngL_ZNS6_5max_kEEL_ZNS6_5min_kEEEEXcviclL_ZNS6_4max_EiiEL_ZNS6_5max_kEEplplngL_ZNS6_5min_kEEL_ZNS6_5kappaEELi1EEEEEXsrT_15return_has_signEXsrT0_21report_trailing_zerosEEENS0_23signed_significand_bitsIS5_EEi
+  0.52      1.89     0.01   250001     0.04     7.48  json_codec_write_g10_77.constprop.0
+  0.52      1.90     0.01   250001     0.04     0.04  json_format_key_g4.constprop.0
+  0.52      1.91     0.01                             main
+  0.00      1.91     0.00  1000016     0.00     0.00  gs_memcpy
+  0.00      1.91     0.00  1000004     0.00     1.85  gj_float_chunk
+  0.00      1.91     0.00      512     0.00     0.00  gj_parse_number
+  0.00      1.91     0.00       14     0.00     0.00  gs_reserve_region
+  0.00      1.91     0.00       14     0.00     0.00  json_peek_g4
+  0.00      1.91     0.00       10     0.00     0.00  gj_parse_float_chunk
+  0.00      1.91     0.00        3     0.00     0.00  _ZN18goose_json_simdutf25get_active_implementationEv
+  0.00      1.91     0.00        2     0.00     0.00  _ZN18goose_json_simdutf13validate_utf8EPKcm
+  0.00      1.91     0.00        2     0.00     0.00  _ZNK18goose_json_simdutf7haswell14implementation13validate_utf8EPKcm
+  0.00      1.91     0.00        2     0.00     0.00  gj_cpp_utf8
+  0.00      1.91     0.00        2     0.00     0.00  gj_utf8
+  0.00      1.91     0.00        2     0.00     0.00  gs_os_arg
+  0.00      1.91     0.00        2     0.00     0.00  json_codec_deserialize_into_g10_43.constprop.0
+  0.00      1.91     0.00        2     0.00     0.00  json_codec_read_g10_45
+  0.00      1.91     0.00        1     0.00     0.00  _ZN18goose_json_simdutf29get_available_implementationsEv
+  0.00      1.91     0.00        1     0.00     0.00  _ZNK18goose_json_simdutf7haswell14implementation10count_utf8EPKcm
+  0.00      1.91     0.00        1     0.00     0.00  _ZNK18goose_json_simdutf8internal29available_implementation_list21detect_best_supportedEv
+  0.00      1.91     0.00        1     0.00     0.00  _ZNK18goose_json_simdutf8internal49detect_best_supported_implementation_on_first_use13validate_utf8EPKcm
+  0.00      1.91     0.00        1     0.00     0.00  _ZNK18goose_json_simdutf8internal49detect_best_supported_implementation_on_first_use8set_bestEv
+  0.00      1.91     0.00        1     0.00     0.00  gs_fmt_u64
+  0.00      1.91     0.00        1     0.00     0.00  gs_memeq
+  0.00      1.91     0.00        1     0.00     0.00  gs_os_read_file
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+
+Copyright (C) 2012-2026 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.

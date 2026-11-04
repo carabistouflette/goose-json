@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Source-drift detection must ignore output, but retain real input checks."""
+"""Recorder controls cover build profiles, source integrity and typed consumption."""
 import importlib.util
 import io
 import json
@@ -125,6 +125,40 @@ class SourceHashesTest(unittest.TestCase):
                 before = measure.source_hashes(self.output)
                 (self.root / name).write_text("changed")
                 self.assertNotEqual(before, measure.source_hashes(self.output))
+
+class DecodeChecksumTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.output = Path(self.directory.name)
+        for label, names in (("before", ("goose-json",)), ("after", ("goose-json",)),
+                             ("compare", ("serde_json", "sonic-rs", "prost (binary)"))):
+            rows = [f"| {name} | {fixture} | decode | 20 | 10 | 1.0 | 1.0–2.0 | {checksum} |"
+                    for name in names for fixture, checksum in (("plain", 100), ("array-wide", 13976))]
+            (self.output / f"run-1-{label}.md").write_text("\n".join(rows))
+
+    def test_matching_typed_consumption(self):
+        measure.validate_decode_checksums(self.output, 1)
+
+    def test_signed_remainder_regression_is_rejected(self):
+        path = self.output / "run-1-compare.md"
+        path.write_text(path.read_text().replace("13976", "5784"))
+        with self.assertRaisesRegex(RuntimeError, "checksum/iteration/fixture mismatch"):
+            measure.validate_decode_checksums(self.output, 1)
+
+    def test_missing_or_duplicate_fixture_is_rejected(self):
+        path = self.output / "run-1-after.md"
+        original = path.read_text()
+        for text in (original.splitlines()[0], original + "\n" + original):
+            path.write_text(text)
+            with self.assertRaises(RuntimeError):
+                measure.validate_decode_checksums(self.output, 1)
+
+    def test_changed_iteration_count_is_rejected(self):
+        path = self.output / "run-1-after.md"
+        path.write_text(path.read_text().replace("| 10 |", "| 11 |"))
+        with self.assertRaisesRegex(RuntimeError, "checksum/iteration/fixture mismatch"):
+            measure.validate_decode_checksums(self.output, 1)
 
 
 if __name__ == "__main__":

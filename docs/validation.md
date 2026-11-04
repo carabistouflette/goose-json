@@ -201,3 +201,42 @@ compiler: manifest verification, the example, and the standalone debug portable
 consumer suite. The README's exact remote-import example was extracted to a new
 project with a fresh package cache. It fetched immutable source `ca9b0dc` and
 produced the documented JSON output. The quickstart now pins that reviewed fix.
+
+## Expanded corpus and consumption audit
+
+The benchmark-only checkpoint extends the corpus to thirteen fixtures: signed
+small integers, wide integers including i64 limits, and a synthetic mixed event
+with nested text and independently owned arrays. Goose uses `deserialize_into`
+in all cases; both revisions use that same harness. Both languages validate
+complete fixture values before timing, and Rust's numeric roundtrip checks now
+compare float bits, including signed zero.
+
+An independent GPT-6.1 Sol ultra review found one checksum inconsistency: Goose
+uses nonnegative modulo, whereas Rust used signed remainder for negative integer
+endpoints. Decoded values were correct; timed result consumption differed. The
+review otherwise found no scoped blocker and ran 69 mutation probes, all rejected
+before affected-fixture timing, including middle-array and signed-zero changes.
+
+Rust now uses `rem_euclid(1024)`. Four recorder regressions cover mismatched
+checksums/counts and missing/duplicate fixtures. All thirteen recorder tests pass;
+the corrected smoke run has identical typed-decoder checksums for every fixture.
+The recorder marks validation failed and stops if any typed implementation or
+revision consumes different values/counts. All three initial probe passes finished
+normally and are retained separately; the new guard rejects each one.
+
+The accepted recording at harness source
+`4835c5041ec69605f6b027a11b365f860f2c9ef8` uses fixed `v0.1.1` as baseline.
+Production codec/native files match that release byte-for-byte. All nine process
+outputs and 3,276 batch averages are retained, with every pass contributing to
+the tables and `typed_decode_checksums: passed` in provenance. This establishes
+controls for the expanded corpus; before/after differences are not codec speedups.
+See [results and full provenance](../bench/results/corpus-native-2026-11-04).
+
+Separate encode-only gprof builds instrument the generated C, runtime and native
+library. All six profiles run after the initial recording and before the accepted
+rerun, on CPU 4; their times never contribute to benchmark results. Hardware
+sampling was denied, and host security settings were not changed. Coarse leads
+are integer conversion/copying, native float digit/layout work and string
+escaping/validation. Source, flags, hashes, checksums, reproduction steps and all
+flat-profile exports are retained. Instrumentation changes costs and inlining;
+profile distributions are not latency estimates or achievable-speedup claims.

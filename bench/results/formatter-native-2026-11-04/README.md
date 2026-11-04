@@ -2,7 +2,7 @@
 
 Candidate `ca9b0dce42061c38e72d05233ee229874dc5b682` versus public baseline
 `0c26308570cbe2c6769c1bf0eba8d86e7e8ad681`, 2026-11-04. Full results, semantics and
-shared-host limitations: [benchmark report](../../README.md#recorded-native-results).
+shared-host limitations: [historical benchmark report](report.md).
 
 All nine process outputs, all 2,520 batch averages, source/executable hashes,
 process order/timing, toolchain and requested/observed build profiles are retained.
