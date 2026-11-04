@@ -220,6 +220,23 @@ fn test_text_encoding() {
     }
 }
 
+fn test_text_prefix_boundaries() {
+    let lengths: i64[7] = [0, 31, 32, 33, 63, 64, 72];
+    for length in lengths {
+        for unicode in 2 {
+            var value = json_codec::Text { bytes: [] };
+            var remaining = length;
+            if unicode > 0 && length >= 6 { value.bytes.append("é😀"); remaining -= 6; }
+            for i in remaining { value.bytes.push('a'); }
+            for i in 128 { value.bytes.append("\n\"\\é😀"); }
+            var expected: u8[>..] = [];
+            json::format_string(expected, value.bytes);
+            let actual, error = json_codec::serialize(value);
+            assert(error.len == 0 && actual[..] == expected[..]);
+        }
+    }
+}
+
 fn test_integers() {
     // Integer fast path: exact boundaries, signs, grammar and owned API calls.
     let boundaries: i64[7] = [-9223372036854775808, -9223372036854775807, -1, 0, 1, 9223372036854775806, 9223372036854775807];
@@ -320,6 +337,7 @@ fn main() {
     test_utf8_validation();
     test_prefix_scanner();
     test_text_encoding();
+    test_text_prefix_boundaries();
     test_integers();
     test_float_chunks();
     test_text_chunk_boundaries();

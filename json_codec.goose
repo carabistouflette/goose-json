@@ -191,10 +191,12 @@ fn write(out: u8[>..]&, value: Text&) -> bool {
         let prefix = native_quote_prefix(value.bytes);
         if prefix < 0 { return false; }
         out.push('"');
-        out.append(value.bytes[..prefix]);
-        if prefix < value.bytes.len {
+        if prefix == value.bytes.len { out.append(value.bytes); }
+        else {
             var buffer: u8[4096] = [0; 4096];
-            var position = prefix;
+            var position = 0;
+            // Keep dense-text block boundaries unchanged; skip a full block or more.
+            if prefix >= 32 { out.append(value.bytes[..prefix]); position = prefix; }
             while position < value.bytes.len {
                 let count = native_escape_chunk(value.bytes, position, buffer[..], position);
                 if count < 0 { return false; }
