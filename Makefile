@@ -3,7 +3,7 @@ BENCH_CC ?= gcc
 
 GOOSE ?= .toolchain/goose/build/goose
 
-.PHONY: setup check test format
+.PHONY: setup check test test-debug format
 setup:
 	./scripts/setup-goose.sh
 check:
@@ -21,6 +21,12 @@ test:
 	./.build/codec
 	"$(GOOSE)" run examples/item.goose
 	"$(GOOSE)" run bench/bench.goose -- 10
+test-debug:
+	python3 scripts/native-manifest.py --check
+	mkdir -p .build
+	"$(GOOSE)" run tests/codec.goose --debug
+	"$(GOOSE)" build tests/codec.goose --debug -o .build/codec-debug
+	./.build/codec-debug
 format:
 	python3 scripts/native-manifest.py
 	"$(GOOSE)" format json_codec.goose examples tests bench

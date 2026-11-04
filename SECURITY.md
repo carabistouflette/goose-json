@@ -21,6 +21,8 @@ See the [API contract](docs/api.md) for supported types and ownership rules.
 ## Checks
 
 The public API is tested through TinyCC, native and forced-portable builds.
+CI also runs `make test-debug` in runner and compiled modes, enabling Goose's
+debug overflow, cast-range and tag checks.
 Native checks use GCC/Clang ASan/UBSan, guard pages and float bit-pattern tests.
 The [native fuzzer](native/README.md#testing) runs in CI and can be run locally for
 longer campaigns. Vendored dependencies are pinned with their original notices;

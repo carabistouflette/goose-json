@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../native/api.h"
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -23,6 +24,44 @@ static int64_t plain_end(sl_u8 text, int64_t at) {
 static void space(const char *&p) {
     while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
         ++p;
+}
+// A bytewise wire oracle catches paired encoder/decoder mistakes that a
+// round-trip alone can miss. Unlike the kernel, it has no SIMD or chunk state.
+static std::string escape(const std::string &input) {
+    std::string result;
+    for (unsigned char c : input) {
+        switch (c) {
+        case '"':
+            result += "\\\"";
+            break;
+        case '\\':
+            result += "\\\\";
+            break;
+        case '\b':
+            result += "\\b";
+            break;
+        case '\t':
+            result += "\\t";
+            break;
+        case '\n':
+            result += "\\n";
+            break;
+        case '\f':
+            result += "\\f";
+            break;
+        case '\r':
+            result += "\\r";
+            break;
+        default:
+            if (c < 32) {
+                char text[7];
+                require(std::snprintf(text, sizeof text, "\\u%04x", unsigned(c)) == 6);
+                result += text;
+            } else
+                result += char(c);
+        }
+    }
+    return result;
 }
 static std::string format(double value) {
     uint8_t text[33];
@@ -80,6 +119,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
             require(n >= 0 && n <= capacity && at > before && at <= input.len);
             encoded.append(reinterpret_cast<char *>(buffer.data()), n);
         }
+        require(encoded == escape(original));
         encoded.push_back('"');
         sl_u8 wire{reinterpret_cast<uint8_t *>(encoded.data()),
                    static_cast<int64_t>(encoded.size())};

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Run the public suite with Goose's debug checks in runner and compiled modes
+  in CI (`make test-debug`).
+- Compare fuzzed escaped bytes against an independent bytewise oracle, alongside
+  the existing round-trip checks. Production codec behavior is unchanged.
+
 ## 0.1.0
 
 First experimental release. The API may change before 1.0.

@@ -61,3 +61,34 @@ ranking or statistical-significance claim follows from these measurements.
 
 Linux x86-64 with GCC and Clang is tested. Other operating systems and
 architectures remain unverified.
+
+## Public-contract audit after 0.1.0
+
+An additional 2026-11-04 audit targeted the released codec at
+`ea9133d94d14a4b8a381437d7983ba8fe1a836f1`. No new reproducible production bug
+was found in that scope. Production Goose/native code, benchmark harnesses and
+dependencies are unchanged by the subsequent test/CI improvements.
+
+- An independent GPT-6.1 Sol ultra review exercised 99,420 inputs per backend:
+  native debug, forced-portable debug and TinyCC. It found no acceptance or
+  decoded-value discrepancy. Another 21,291 float cases passed per compiled
+  backend, including bit comparisons with the pinned standard reader.
+- That review also checked nested/empty structs, malformed and escaped keys,
+  duplicate/unknown fields, resource limits, destination reuse, ownership and
+  partial-error behavior. Direct input/destination aliasing and aliasing through
+  a containing record were rejected by Goose's lifetime checker.
+- A separate Python JSON oracle checked 6,686 root scalar/array, Unicode,
+  malformed-input and limit cases. The campaign passed in the debug runner and
+  a native debug executable built with Clang ASan/UBSan, comparing expected
+  values and finite float bits as well as serialization round-trips.
+- `make test-debug` passed in runner and compiled modes and is now required in
+  CI. It enables Goose's debug overflow, cast-range and tag checks.
+- The maintained fuzzer now checks exact escaped bytes against a bytewise
+  oracle. A temporary paired newline/tab swap in encoder and decoder passed the
+  former round-trip-only check and was rejected by the new oracle. Another
+  100,000 fuzz cases passed in each of SSE2, AVX2 and scalar scanner modes.
+
+The public-contract/Python probes and mutation experiment were one-off audit
+tools; they are not maintained CI targets. The debug suite and escaped-byte
+oracle are maintained in this repository. This audit does not extend platform
+support or establish a universal security guarantee.

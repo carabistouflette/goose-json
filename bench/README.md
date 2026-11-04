@@ -57,7 +57,9 @@ iterations, with fixture-specific divisors described above. Full provenance is
 in [metadata.json](results/sparse-native-2026-11-04/metadata.json).
 
 Measured candidate: `6fad097cef35c0623b45e96e84246de6b0a64a70`. Baseline: `ce1f8066fd18de466cc78800202452b7d0fcd9c0`.
-Later documentation changes do not alter the measured codec. Both builds use
+Later documentation and test/CI changes do not alter the measured codec. The
+Makefile has since gained a debug-test target; its benchmark targets and flags
+are unchanged. Both measured builds use
 the same controlled environment, fresh native cache and release flags; sanitizer
 and fuzz instrumentation are disabled.
 
