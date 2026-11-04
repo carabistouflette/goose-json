@@ -423,6 +423,9 @@ static inline int64_t gj_impl_number(double value, sl_u8 output) {
     memcpy(&bits, &value, sizeof bits);
     if (((bits >> 52) & 0x7ff) == 0x7ff)
         return -1;
+    double magnitude = value < 0 ? -value : value;
+    if (magnitude >= 1e16 || (magnitude > 0 && magnitude < 1e-5))
+        return gj_cpp_scientific(value, output);
     char storage[20];
     char *digits = storage + sizeof storage;
     uint8_t *text = output.data;

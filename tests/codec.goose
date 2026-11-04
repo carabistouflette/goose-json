@@ -245,6 +245,14 @@ fn main() {
     bad_chunk.push(1.0 / 0.0);
     let no_text, bad_chunk_error = json_codec::serialize(bad_chunk);
     assert(no_text.len == 0 && bad_chunk_error.len > 0);
+    let bad_float_arrays: const u8[:][10] = ["[1,]", "[,1]", "[01]", "[1.00000000000000001,]", "[1e9999]", "[nan]", "[1e+]", "[1.25 2.5]", "[1]true", "[1.]"];
+    for input in bad_float_arrays {
+        var values: f64[>..] = [];
+        assert(json_codec::deserialize_into(input, values).len > 0);
+    }
+    var underflow_values: f64[>..] = [];
+    assert(json_codec::deserialize_into("[1.25,-1e-9999,2.5]", underflow_values).len == 0);
+    assert(underflow_values.len == 3 && float_text::bits_of(underflow_values[1]) == float_text::bits_of(-0.0));
     // Escapes and surrogate pairs straddle native block/output boundaries.
     for offset in 96 {
         var value = json_codec::Text { bytes: [] };

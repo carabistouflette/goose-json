@@ -13,6 +13,7 @@ check:
 	$(GOOSE) check examples/item.goose
 	$(GOOSE) check bench/bench.goose
 test:
+	python3 scripts/native-manifest.py --check
 	$(GOOSE) run tests/codec.goose
 	mkdir -p .build
 	$(GOOSE) build tests/codec.goose -o .build/codec
@@ -40,5 +41,5 @@ bench-native:
 .PHONY: test-native
 test-native:
 	mkdir -p .build
-	$(CXX) -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer tests/native.cpp native/accelerated.cpp native/vendor/simdutf/simdutf.cpp -Inative/vendor/simdutf -o .build/native-sanitize
+	$(CXX) -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer tests/native.cpp native/accelerated.cpp native/vendor/simdutf/simdutf.cpp native/vendor/dragonbox/dragonbox_to_chars.cpp -DJKJ_NAMESPACE=goose_json_dragonbox -Inative/vendor -Inative/vendor/simdutf -o .build/native-sanitize
 	UBSAN_OPTIONS=halt_on_error=1 ./.build/native-sanitize

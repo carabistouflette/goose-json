@@ -5,8 +5,10 @@
 #include <stdint.h>
 #if defined(__GNUC__) || defined(__clang__)
 typedef int64_t gs_i64 __attribute__((aligned(1)));
+typedef double gs_f64 __attribute__((aligned(1)));
 #else
 typedef int64_t gs_i64;
+typedef double gs_f64;
 #endif
 #pragma pack(push, 1)
 typedef struct {
@@ -27,6 +29,10 @@ typedef struct {
 } gj_decimal;
 uint8_t gj_cpp_utf8(const char *data, size_t length);
 gj_decimal gj_cpp_decimal(double value);
+int64_t gj_cpp_scientific(double value, sl_u8 output);
+int64_t gj_parse_number(sl_u8 input, gs_f64 *output);
+int64_t gj_parse_float_chunk(sl_u8 text, int64_t at, sl_f64 output, gs_i64 *position, uint8_t *done,
+                             uint8_t prefix);
 uint8_t gj_utf8(sl_u8 text);
 void gj_prefix(sl_u8 text, int64_t at, gs_i64 *end, uint8_t *ascii);
 int64_t gj_quote_prefix(sl_u8 text);

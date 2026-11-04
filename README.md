@@ -2,7 +2,7 @@
 
 Automatic, strict JSON ↔ struct mapping for the [Goose language](https://github.com/aardappel/goose), using `const for` field reflection. Apache-2.0. Experimental API, no release yet.
 
-Addresses the request in [discussion #219](https://github.com/aardappel/goose/discussions/219) without macros, code generation, or a runtime reflection registry. Native builds use small bounded C++ kernels with vendored Dragonbox and simdutf; Goose owns all storage. The in-process TinyCC runner uses the Goose implementation. See [native build and dependency details](native/README.md).
+Addresses the request in [discussion #219](https://github.com/aardappel/goose/discussions/219) without macros, code generation, or a runtime reflection registry. Native builds use small bounded C++ kernels with vendored Dragonbox, fast_float and simdutf; Goose owns all storage. The in-process TinyCC runner uses the Goose implementation. See [native build and dependency details](native/README.md).
 
 ```goose
 import json_codec from "carabistouflette/goose-json@<commit>";

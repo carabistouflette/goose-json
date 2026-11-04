@@ -10,6 +10,8 @@ extern fn native_prefix(text: const u8[:], at: i64, end: i64&, ascii: bool&) = "
 extern fn native_quote_prefix(text: const u8[:]) -> i64 = "gj_quote_prefix";
 extern fn native_escape_chunk(text: const u8[:], at: i64, out: u8[:], position: i64&) -> i64 = "gj_escape_chunk";
 extern fn native_unquote(text: const u8[:], at: i64, out: u8[:], position: i64&, done: bool&) -> i64 = "gj_unquote";
+extern fn native_parse_float_chunk(text: const u8[:], at: i64, out: f64[:], position: i64&, done: bool&, prefix: bool) -> i64 = "gj_parse_float_chunk";
+extern fn native_parse_number(text: const u8[:], value: f64&) -> i64 = "gj_parse_number";
 extern fn native_number(value: f64, out: u8[:]) -> i64 = "gj_number";
 extern fn native_float_chunk(values: const f64[:], out: u8[:], prefix: bool) -> i64 = "gj_float_chunk";
 
@@ -112,7 +114,12 @@ inline fn read(r: json::Reader&, value: i64&) {
 }
 fn read(r: json::Reader&, value: bool&) { value = json::read_bool(r); }
 fn read(r: json::Reader&, value: f64&) {
-    if !number_allowed(r) { return; }
+    if native_available() {
+        json::peek(r);
+        let count = native_parse_number(r.text[r.pos..], value);
+        if count > 0 { r.pos += count; return; }
+    }
+    if number_end(r) < 0 { return; }
     value = json::read_number(r);
     if !finite(value) { json::fail(r, "number outside finite f64 range"); }
 }
@@ -266,6 +273,24 @@ fn read(r: json::Reader&, value: bool[>..]&) {
 }
 
 fn read(r: json::Reader&, value: f64[>..]&) {
+    if native_available() && json::peek(r) == '[' {
+        let start = r.pos;
+        var position = start + 1;
+        var done = false;
+        var prefix = false;
+        var buffer: f64[64] = [0.0; 64];
+        value.clear();
+        while !done {
+            let count = native_parse_float_chunk(r.text, position, buffer[..], position, done, prefix);
+            if count < 0 { break; }
+            value.append(buffer[..count]);
+            prefix = true;
+        }
+        if done { r.pos = position; return; }
+        // Reparse uncommon conversions with the standard reader's established
+        // underflow/range policy. No partially parsed native values escape.
+        r.pos = start;
+    }
     value.clear();
     json::each_element(r) { read(r, value.push(0.0)); };
 }
@@ -273,7 +298,7 @@ fn read(r: json::Reader&, value: f64[>..]&) {
 // Bound work BEFORE entering the upstream arbitrary-precision number scanner.
 // Its exponent saturation is also safe within this bound: a mantissa of at
 // most 128 bytes cannot compensate an exponent saturated at 100000.
-fn number_allowed(r: json::Reader&) -> bool {
+fn number_end(r: json::Reader&) -> i64 {
     json::peek(r);
     var end = r.pos;
     while end < r.text.len {
@@ -282,10 +307,10 @@ fn number_allowed(r: json::Reader&) -> bool {
         end++;
         if end - r.pos > MAX_NUMBER_BYTES {
             json::fail(r, "number token exceeds 128 bytes");
-            return false;
+            return -1;
         }
     }
-    return true;
+    return end;
 }
 
 fn finite(value: f64) -> bool {

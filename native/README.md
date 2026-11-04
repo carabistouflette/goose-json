@@ -28,7 +28,8 @@ Apache license alternatives, including Dragonbox's LLVM exception.
 
 - Dragonbox: https://github.com/jk-jeon/dragonbox at
   `beeeef91cf6fef89a4d4ba5e95d47ca64ccb3a44`.
-  `include/dragonbox/dragonbox.h` is copied to `vendor/dragonbox/dragonbox.h`.
+  `include/dragonbox/{dragonbox.h,dragonbox_to_chars.h}` and
+  `source/dragonbox_to_chars.cpp` are copied to `vendor/dragonbox/`.
   Apache-2.0 WITH LLVM-exception or BSL-1.0.
 - simdutf: https://github.com/simdutf/simdutf at
   `4ab2be54f0b41536d5258675ffad7ba5d10fe384`.
@@ -42,6 +43,16 @@ Apache license alternatives, including Dragonbox's LLVM exception.
 
   Only `simdutf.cpp` and `simdutf.h` are retained, with the upstream licenses.
 
-Dragonbox and simdutf use package-specific C++ namespaces to avoid collisions
-with another dependency's vendored version. No runtime network access or
+Dragonbox, fast_float and simdutf use package-specific C++ namespaces to avoid collisions
+with another dependency's vendored version. - fast_float: https://github.com/fastfloat/fast_float at
+  `dbeabeeb3e6791cb96994c2a7a084c36e62ccfb2`.
+  Apache-2.0 or MIT or BSL-1.0. Generate the single header with
+  `python3 script/amalgamate.py > /path/to/native/vendor/fast_float/fast_float.h`
+  from that checkout. Original licenses are retained alongside it.
+
+Numeric reads use fast_float's strict JSON mode on a bounded 129-byte window;
+consumption beyond 128 bytes is rejected. Conversion failures fall back to
+Goose to preserve range/underflow behavior. Float arrays use batches of 64;
+a failed batch reparses the array with Goose. The fast_float namespace is private.
+No runtime network access or
 external package manager is required.

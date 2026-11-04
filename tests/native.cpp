@@ -34,7 +34,51 @@ static void roundtrip(double value) {
     char *end;
     double actual = strtod((const char *)output + 1, &end);
     assert(end == (char *)output + n + 1 && bits(actual) == bits(value));
+    double parsed;
+    // Subnormal underflow may deliberately fall back to Goose.
+    if (gj_parse_number({output + 1, n}, &parsed) == n)
+        assert(bits(parsed) == bits(value));
     assert(gj_number(value, {output + 1, 31}) == -1);
+}
+
+static void numbers() {
+    uint8_t packed[9];
+    auto *value = (gs_f64 *)(void *)(packed + 1);
+    for (const char *bad : {"", "-", "+1", ".1", "01", "1.", "1e", "1e+", "nan", "inf", "1e9999"}) {
+        std::string text(bad);
+        auto n = gj_parse_number(span(text), value);
+        // A valid numeric prefix is allowed; the Goose container checks delimiters.
+        assert(n == 0 || n < (int64_t)text.size());
+    }
+    std::string tiny = "-0.0";
+    assert(gj_parse_number(span(tiny), value) == 4 && bits(*value) == bits(-0.0));
+    std::string too_long(129, '1');
+    assert(gj_parse_number(span(too_long), value) == 0);
+    for (int length = 0; length <= 130; ++length) {
+        std::string text = "[";
+        for (int i = 0; i < length; ++i) {
+            if (i)
+                text += ',';
+            text += "1.25";
+        }
+        text += "]";
+        uint8_t raw[64 * 8 + 1];
+        auto *values = (double *)(void *)(raw + 1);
+        uint8_t done = 0, prefix = 0;
+        int64_t at = 1, total = 0;
+        while (!done) {
+            auto n = gj_parse_float_chunk(span(text), at, {values, 64}, &at, &done, prefix);
+            assert(n >= 0 && n <= 64);
+            for (int i = 0; i < n; ++i) {
+                double d;
+                memcpy(&d, raw + 1 + i * 8, 8);
+                assert(d == 1.25);
+            }
+            total += n;
+            prefix = 1;
+        }
+        assert(total == length && at == (int64_t)text.size());
+    }
 }
 
 static void strings() {
@@ -158,6 +202,7 @@ int main() {
     double inf = INFINITY;
     memcpy(packed + 1 + 63 * 8, &inf, 8);
     assert(gj_float_chunk({(double *)(void *)(packed + 1), 64}, {output + 1, 2112}, 0) == -1);
+    numbers();
     strings();
     guard_pages();
     puts("native kernels: 1,000,000 float patterns, string boundaries and guard pages passed");
