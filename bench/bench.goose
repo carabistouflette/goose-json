@@ -21,7 +21,7 @@ fn consume(value: Wide&) -> i64 {
 }
 fn equal(a: Floats&, b: Floats&) -> bool {
     if a.values.len != b.values.len { return false; }
-    for i in a.values.len { if a.values[i] != b.values[i] { return false; } }
+    for i in a.values.len { if float_text::bits_of(a.values[i]) != float_text::bits_of(b.values[i]) { return false; } }
     return true;
 }
 fn equal(a: Wide&, b: Wide&) -> bool {
@@ -30,7 +30,16 @@ fn equal(a: Wide&, b: Wide&) -> bool {
 }
 fn validate_fixture(name: u8[:], value: Floats&) {
     assert(value.values.len == 256);
-    for i in value.values.len { assert(value.values[i] == (i - 128) / 8.0); }
+    for i in value.values.len {
+        var expected = (i - 128) / 8.0;
+        if name == "floats-wide" {
+            expected = float_text::ldexp(((i * 2654435761) % 1000003 + 1) / 1000003.0, ((i * 37) % 2045 - 1022) as! i32);
+            if i % 2 > 0 { expected = -expected; }
+            if i == 0 { expected = 0.125; }
+            if i == 255 { expected = 1.25; }
+        }
+        assert(float_text::bits_of(value.values[i]) == float_text::bits_of(expected));
+    }
 }
 fn validate_fixture(name: u8[:], value: Wide&) {
     var i = 0;
@@ -163,6 +172,7 @@ fn main() {
     benchmark<Item>("escaped", count);
     benchmark<Numbers>("array", max(1, count / 10));
     benchmark<Floats>("floats", max(1, count / 100));
+    benchmark<Floats>("floats-wide", max(1, count / 100));
     benchmark<Item>("text-ascii", max(1, count / 100));
     benchmark<Item>("text-escaped", max(1, count / 100));
     benchmark<Wide>("wide", max(1, count / 5));

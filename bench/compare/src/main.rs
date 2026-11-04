@@ -247,6 +247,7 @@ fn main() {
     benchmark::<Item>("escaped", count);
     benchmark::<Numbers>("array", (count / 10).max(1));
     benchmark::<Floats>("floats", (count / 100).max(1));
+    benchmark::<Floats>("floats-wide", (count / 100).max(1));
     benchmark::<Item>("text-ascii", (count / 100).max(1));
     benchmark::<Item>("text-escaped", (count / 100).max(1));
     benchmark::<Wide>("wide", (count / 5).max(1));
