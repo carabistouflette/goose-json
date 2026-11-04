@@ -3,10 +3,11 @@
 Goose owns all allocation, capacity checks and result lifetimes. These private
 C ABI functions receive bounded slices and write only inside supplied storage;
 no builder internals, padded loads or alignment assumptions are used. Goose's
-`i64&` can be byte-aligned, so output references use `gs_i64` with alignment 1.
+`i64&` and `f64&` can be byte-aligned, so output references use
+`gs_i64` / `gs_f64` with alignment 1.
 `unquote` receives input already UTF-8 validated by the entry point;
 `escape_chunk` follows successful validation by `quote_prefix`. These are private
-preconditions, with all buffer bounds enforced independently. Float-array elements are loaded with `memcpy` for the same reason.
+preconditions, with all buffer bounds enforced independently. Float-array elements are loaded and stored with `memcpy` for the same reason.
 
 CMake builds a C++17 static library. The generated Goose C only includes
 `select.h`; TinyCC, compilers other than GCC/Clang, and `GOOSE_JSON_FORCE_PORTABLE` select
@@ -22,7 +23,7 @@ package cache. `make check` and benchmark builds reject a stale fingerprint.
 
 ## Vendored dependencies
 
-The following source files are unmodified. Their notices and both upstream
+The following source files are unmodified. Their notices and upstream
 license alternatives are preserved alongside them. This package uses the
 Apache license alternatives, including Dragonbox's LLVM exception.
 
@@ -43,16 +44,19 @@ Apache license alternatives, including Dragonbox's LLVM exception.
 
   Only `simdutf.cpp` and `simdutf.h` are retained, with the upstream licenses.
 
-Dragonbox, fast_float and simdutf use package-specific C++ namespaces to avoid collisions
-with another dependency's vendored version. - fast_float: https://github.com/fastfloat/fast_float at
+- fast_float: https://github.com/fastfloat/fast_float at
   `dbeabeeb3e6791cb96994c2a7a084c36e62ccfb2`.
   Apache-2.0 or MIT or BSL-1.0. Generate the single header with
   `python3 script/amalgamate.py > /path/to/native/vendor/fast_float/fast_float.h`
   from that checkout. Original licenses are retained alongside it.
 
+Dragonbox, fast_float and simdutf use package-specific C++ namespaces to avoid
+collisions with another dependency's vendored version. The package sidecar
+excludes toolchain checkouts, build scratch, benchmarks, tests and examples from
+Goose's native symbol collection; only library modules supply package symbols.
+
 Numeric reads use fast_float's strict JSON mode on a bounded 129-byte window;
 consumption beyond 128 bytes is rejected. Conversion failures fall back to
 Goose to preserve range/underflow behavior. Float arrays use batches of 64;
 a failed batch reparses the array with Goose. The fast_float namespace is private.
-No runtime network access or
-external package manager is required.
+No runtime network access or external package manager is required.
