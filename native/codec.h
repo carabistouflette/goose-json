@@ -394,7 +394,6 @@ static inline int64_t gj_impl_unquote(sl_u8 input, int64_t at, sl_u8 output, gs_
             if (c != '\\' || i == n)
                 return -1;
             c = s[i++];
-            int cp;
             if (c != 'u') {
                 // All ordinary escapes produce exactly one byte.
                 static const uint8_t decoded[128] = {
@@ -409,21 +408,18 @@ static inline int64_t gj_impl_unquote(sl_u8 input, int64_t at, sl_u8 output, gs_
                 out[used++] = decoded[c];
                 continue;
             }
-            if (c == 'u') {
-                cp = gj_u16(s, n, &i);
-                if (cp < 0)
+            int cp = gj_u16(s, n, &i);
+            if (cp < 0)
+                return -1;
+            if (cp >= 0xd800 && cp <= 0xdbff) {
+                if (n - i < 6 || s[i] != '\\' || s[i + 1] != 'u')
                     return -1;
-                if (cp >= 0xd800 && cp <= 0xdbff) {
-                    if (n - i < 6 || s[i] != '\\' || s[i + 1] != 'u')
-                        return -1;
-                    i += 2;
-                    int low = gj_u16(s, n, &i);
-                    if (low < 0xdc00 || low > 0xdfff)
-                        return -1;
-                    cp = 0x10000 + ((cp - 0xd800) << 10) + low - 0xdc00;
-                } else if (cp >= 0xdc00 && cp <= 0xdfff)
+                i += 2;
+                int low = gj_u16(s, n, &i);
+                if (low < 0xdc00 || low > 0xdfff)
                     return -1;
-            } else
+                cp = 0x10000 + ((cp - 0xd800) << 10) + low - 0xdc00;
+            } else if (cp >= 0xdc00 && cp <= 0xdfff)
                 return -1;
             int width = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
             if (width > cap - used)

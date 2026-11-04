@@ -13,7 +13,7 @@ fn reject(text: u8[:]) {
     if err.len == 0 { print("unexpected acceptance: ", text); }
     assert(err.len > 0);
 }
-fn main() {
+fn test_records_and_arrays() {
     var item, err = json_codec::deserialize<Item>("{\"name\":\"Goose\\n\\uD83D\\uDE00\",\"active\":true,\"id\":42}");
     assert(err.len == 0);
     assert(item.id == 42 && item.active && item.name.bytes == "Goose\n😀");
@@ -46,7 +46,9 @@ fn main() {
     assert(em.len == 0);
     let escaped, ke = json_codec::deserialize<Item>("{\"\\u0069d\":1,\"active\":false,\"name\":\"\"}");
     assert(ke.len == 0 && escaped.id == 1);
+}
 
+fn test_rejections_and_reuse() {
     reject(""); reject("null"); reject("[]"); reject("{}");
     reject("{\"id\":1,\"active\":true}");
     reject("{\"id\":1,\"id\":2,\"active\":true,\"name\":\"x\"}");
@@ -87,7 +89,9 @@ fn main() {
     var array_data = Data { .. };
     let array_error = json_codec::deserialize_into("{\"point\":{\"x\":0,\"y\":0},\"numbers\":[1,],\"flags\":[],\"scores\":[]}", array_data);
     assert(array_error.len > 0);
+}
 
+fn test_number_limits() {
     // Regressions: bound numeric work before the standard reader, which
     // otherwise mishandles saturated exponents and has quadratic conversion.
     var huge_number = str("{\"value\":1.");
@@ -125,7 +129,9 @@ fn main() {
     assert(min_write_error.len == 0);
     let min_back, min_read_error = json_codec::deserialize<Float>(min_text);
     assert(min_read_error.len == 0 && min_back.value == minimum.value);
+}
 
+fn test_owned_text() {
     // Results own their strings: a temporary source can die before use.
     fn owned() -> Item {
         var source = str("{\"id\":7,\"active\":false,\"name\":\"owned\"}");
@@ -138,7 +144,9 @@ fn main() {
     independent.name.bytes.push(0xff);
     let bad_out, se = json_codec::serialize(independent);
     assert(bad_out.len == 0 && se.len > 0);
+}
 
+fn test_utf8_validation() {
     assert(json_codec::valid_utf8("é😀"));
     assert(!json_codec::valid_utf8([0xc0, 0x80]));
     assert(!json_codec::valid_utf8([0xed, 0xa0, 0x80]));
@@ -157,6 +165,9 @@ fn main() {
         bad_aligned.append("abcdefghijklmnop");
         assert(!json_codec::valid_utf8(bad_aligned));
     }
+}
+
+fn test_prefix_scanner() {
     // Differential-check the word scan against a scalar reference at each
     // byte alignment, including controls, quotes, backslashes and high bytes.
     for offset in 40 {
@@ -190,6 +201,9 @@ fn main() {
         }
         assert(end == expected && ascii == expected_ascii);
     }
+}
+
+fn test_text_encoding() {
     // The fused writer must preserve standard JSON escaping byte-for-byte.
     for byte in 128 {
         var value = json_codec::Text { bytes: [] };
@@ -204,6 +218,9 @@ fn main() {
         assert(json_codec::deserialize_into(actual, decoded).len == 0);
         assert(decoded.bytes[..] == value.bytes[..]);
     }
+}
+
+fn test_integers() {
     // Integer fast path: exact boundaries, signs, grammar and owned API calls.
     let boundaries: i64[7] = [-9223372036854775808, -9223372036854775807, -1, 0, 1, 9223372036854775806, 9223372036854775807];
     for expected in boundaries {
@@ -220,6 +237,9 @@ fn main() {
         var actual: i64 = 0;
         assert(json_codec::deserialize_into(input, actual).len > 0);
     }
+}
+
+fn test_float_chunks() {
     // Float layout, signed zero, chunk boundaries and public API round-trips.
     let float_inputs: const u8[:][10] = ["0.0", "-0.0", "1e-5", "1e-6", "1e15", "1e16", "5e-324", "2.2250738585072014e-308", "1.7976931348623157e308", "1.0000000000000002"];
     for input in float_inputs {
@@ -262,12 +282,15 @@ fn main() {
         var values: f64[>..] = [];
         assert(json_codec::deserialize_into(input, values).len == 0);
         assert(values.len == count + 2);
-        for i in count { assert(values[i] == (i + 1) as f64); }
+        for i in count { assert(values[i] == (i + 1)); }
         assert(float_text::bits_of(values[count]) == float_text::bits_of(-0.0));
         assert(values[count + 1] == 2.5);
         input.pop(); input.append(",]");
         assert(json_codec::deserialize_into(input, values).len > 0);
     }
+}
+
+fn test_text_chunk_boundaries() {
     // Escapes and surrogate pairs straddle native block/output boundaries.
     for offset in 96 {
         var value = json_codec::Text { bytes: [] };
@@ -278,5 +301,18 @@ fn main() {
         var back = json_codec::Text { bytes: [] };
         assert(json_codec::deserialize_into(text, back).len == 0 && back.bytes[..] == value.bytes[..]);
     }
+}
+
+fn main() {
+    test_records_and_arrays();
+    test_rejections_and_reuse();
+    test_number_limits();
+    test_owned_text();
+    test_utf8_validation();
+    test_prefix_scanner();
+    test_text_encoding();
+    test_integers();
+    test_float_chunks();
+    test_text_chunk_boundaries();
     print("codec tests passed");
 }
