@@ -110,13 +110,13 @@ They describe this corpus and machine; close timings can overlap.
 
 ```sh
 make setup                   # build the pinned Goose compiler
-make check test test-debug    # formatting, normal tests and debug checks
+make check test test-debug test-portable  # normal/debug and portable paths
 make test-native CXX=clang++  # native ASan/UBSan checks
 ```
 
 Building Goose from source requires Git, Make, CMake 3.27+ and a C/C++20 toolchain.
 Linux's in-process runner also needs libc development headers. With an installed
-compiler, use `make GOOSE=/path/to/goose check test test-debug`.
+compiler, use `make GOOSE=/path/to/goose check test test-debug test-portable`.
 
 See [contribution guidelines](CONTRIBUTING.md) for commit conventions and checks,
 and [native build details](native/README.md) for dependencies and cache refreshes.

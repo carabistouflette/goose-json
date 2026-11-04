@@ -16,7 +16,7 @@ jobs:
           path: .toolchain
           key: goose-${{ runner.os }}-${{ hashFiles('GOOSE_REVISION', 'scripts/setup-goose.sh') }}
       - run: make setup
-      - run: make check test test-debug
+      - run: make check test test-debug test-portable
       - run: make test-native CXX=clang++
       - run: make test-native CXX=g++
       - run: make fuzz-native FUZZ_RUNS=10000

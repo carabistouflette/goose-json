@@ -13,6 +13,12 @@ CMake builds a C++17 static library. The generated Goose C only includes
 `select.h`; TinyCC, compilers other than GCC/Clang, and `GOOSE_JSON_FORCE_PORTABLE` select
 the Goose fallback.
 The native package still requires CMake and a C++ compiler in either mode.
+`select.h` also exposes bounded adapters to the pinned Goose runtime integer and
+float formatters. They require at least `GS_FMT_MAX` bytes before writing and are
+used in portable builds too. Their Goose declarations live in `runtime.goose`,
+excluded from native symbol collection so TinyCC does not request external
+exports for these header-only adapters. Goose retains builder allocation and
+JSON number layout.
 SSE2/AVX2 scans use bounded unaligned loads when enabled by the compiler;
 other architectures use scalar scans. simdutf selects supported UTF-8 kernels
 at runtime. Deployment builds do not enable `-march=native` by default.

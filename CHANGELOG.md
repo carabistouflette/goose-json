@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Make parsing/serialization errors and numeric output independent of application
+  formatting overloads. Previously, overloads could erase diagnostics or alter
+  integer output and portable float output. Preserve JSON number spelling and
+  native float kernels; cover consumer overloads in normal/debug tests.
+
 - Prevent inherited Cargo release/incremental settings from silently changing
   benchmark comparisons; record the requested profile and reject incompatible
   observed executable profiles before timing.

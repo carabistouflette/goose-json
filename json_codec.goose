@@ -2,6 +2,7 @@
 namespace json_codec;
 import std;
 import json;
+import .native.runtime;
 
 // Internal C ABI wrappers; no native function retains a reference.
 extern fn native_available() -> bool = "gj_available";
@@ -31,12 +32,26 @@ fn deserialize<T>(text: u8[:]) -> T, u8[>..] {
 // Also accepts root structs and supported scalar/array destinations. Encountered
 // strings and arrays replace existing contents; failure may leave partial changes.
 fn deserialize_into<T>(text: u8[:], value: T&) -> u8[>..] {
-    if text.len > MAX_INPUT_BYTES { return str("json_codec: input exceeds 1 MiB"); }
-    if !valid_utf8(text) { return str("json_codec: invalid UTF-8"); }
+    if text.len > MAX_INPUT_BYTES { return error_text("json_codec: input exceeds 1 MiB"); }
+    if !valid_utf8(text) { return error_text("json_codec: invalid UTF-8"); }
     var r = json::reader(text);
     read(r, value);
-    if !json::finish(r) { return json::message(r); }
+    if !json::finish(r) { return reader_error(r); }
     return [];
+}
+
+// Error length is the success/failure signal. Consumer formatting overloads
+// must never be able to erase it, so diagnostics use byte operations directly.
+fn error_text(message: const u8[:]) -> u8[>..] {
+    var out: u8[>..] = [];
+    out.append(message);
+    return out;
+}
+fn reader_error(r: json::Reader&) -> u8[>..] {
+    var out: u8[>..] = [];
+    out.append("json: "); out.append(r.error); out.append(" at byte ");
+    owned_int(out, r.error_at);
+    return out;
 }
 
 fn read(r: json::Reader&, value: Text&) {
@@ -168,7 +183,7 @@ fn read<T>(r: json::Reader&, value: T&) {
 // An error produces empty output; partial JSON is never returned.
 fn serialize<T>(value: T&) -> u8[>..], u8[>..] {
     var out: u8[>..] = [];
-    if !write(out, value) { out.clear(); return out, str("json_codec: invalid UTF-8 or non-finite number"); }
+    if !write(out, value) { out.clear(); return out, error_text("json_codec: invalid UTF-8 or non-finite number"); }
     return out, [];
 }
 fn write(out: u8[>..]&, value: Text&) -> bool {
@@ -237,7 +252,7 @@ fn plain_prefix(text: u8[:], at: i64) -> i64, bool {
     }
     return end, (high & 0x8080808080808080) == 0;
 }
-fn write(out: u8[>..]&, value: i64&) -> bool { json::format_int(out, value); return true; }
+inline fn write(out: u8[>..]&, value: i64&) -> bool { owned_int(out, value); return true; }
 fn write(out: u8[>..]&, value: bool&) -> bool { json::format_bool(out, value); return true; }
 fn write(out: u8[>..]&, value: f64&) -> bool {
     if !finite(value) { return false; }
@@ -248,7 +263,7 @@ fn write(out: u8[>..]&, value: f64&) -> bool {
         out.append(text[..count]);
         return true;
     }
-    json::format_number(out, value);
+    owned_number(out, value);
     return true;
 }
 fn write<T>(out: u8[>..]&, value: T&) -> bool {
@@ -391,4 +406,112 @@ fn write(out: u8[>..]&, value: f64[>..]&) -> bool {
     }
     out.push(']');
     return true;
+}
+
+inline fn owned_int(out: u8[>..]&, value: i64) {
+    // Keep common nonnegative integers in Goose, without a runtime call/copy.
+    if value >= 0 && value < 10000 {
+        if value >= 1000 { out.push(('0' + value / 1000) as! u8); }
+        if value >= 100 { out.push(('0' + value / 100 % 10) as! u8); }
+        if value >= 10 { out.push(('0' + value / 10 % 10) as! u8); }
+        out.push(('0' + value % 10) as! u8);
+        return;
+    }
+    var text: u8[32] = [0; 32];
+    let count = runtime_i64(value, text[..]);
+    assert(count > 0 && count <= text.len);
+    out.append(text[..count]);
+}
+// Float digit selection and layout adapted from Goose stdlib/json.goose
+// (eadca409f68210893f366e60d0c2f0dc29a339be, Apache-2.0). See NOTICE.
+// Keep JSON spelling while avoiding consumer formatting hooks.
+fn owned_number(out: u8[>..]&, value: f64) {
+    if value == 0.0 {
+        out.append(if 1.0 / value < 0.0 { "-0.0" } else { "0.0" });
+        return;
+    }
+    var text: u8[21] = [0; 21];
+    let len, point = json::ryu_digits(value, text[1..]);
+    if len > 0 {
+        if value < 0.0 { out.push('-'); }
+        owned_layout(out, text, len, point);
+        return;
+    }
+    let other_len, other_point = owned_general(abs(value), text[1..18]);
+    if value < 0.0 { out.push('-'); }
+    owned_layout(out, text, other_len, other_point);
+}
+fn runtime_digits(value: f64, out: u8[:]) -> i64, i64 {
+    var text: u8[32] = [0; 32];
+    let count = runtime_f64(value, text[..]);
+    assert(count > 0 && count <= text.len);
+    var len = 0;
+    var point = 0;
+    var frac = false;
+    var lead = true;
+    var i = 0;
+    while i < count && text[i] != 'e' {
+        let c = text[i];
+        i++;
+        if c == '.' { frac = true; continue; }
+        if lead && c == '0' {
+            if frac { point--; }
+            continue;
+        }
+        lead = false;
+        if len < out.len { out[len] = c; len++; } else { assert(c == '0'); }
+        if !frac { point++; }
+    }
+    if i < count {
+        let e, end = json::scan_exponent(text[..count], i + 1);
+        assert(end == count);
+        point += e;
+    }
+    assert(len > 0);
+    return len, point;
+}
+fn owned_general(x: f64, out: u8[:]) -> i64, i64 {
+    var s = 15;
+    var p = x * 1e15;
+    while p < 1e14 && s < 22 { s++; p = x * float_text::POW10[s]; }
+    while p >= 1e15 && s > -22 { s--; p = if s >= 0 { x * float_text::POW10[s] } else { x / float_text::POW10[-s] }; }
+    if p >= 1e14 && p < 1e15 {
+        var n = (p + 0.5) as! u64;
+        if n == 1000000000000000 { n = 100000000000000; s--; }
+        let back = if s >= 0 { n / float_text::POW10[s] } else { n * float_text::POW10[-s] };
+        if back == x {
+            json::put_digits(out[..15], n);
+            return 15, 15 - s;
+        }
+    }
+    return runtime_digits(x, out);
+}
+
+inline fn owned_layout(out: u8[>..]&, text: u8[21]&, digits: i64, point: i64) {
+    var len = digits;
+    while text[len] == '0' { len--; }
+    if point > 0 && point < len {
+        for i in point { text[i] = text[i + 1]; }
+        text[point] = '.';
+        out.append(text[..len + 1]);
+        return;
+    }
+    let d = text[1..len + 1];
+    if point >= len && point <= 16 {
+        out.append(d);
+        for i in point - len { out.push('0'); }
+        out.append(".0");
+    } else if point > -5 && point <= 0 {
+        out.append("0.");
+        for i in -point { out.push('0'); }
+        out.append(d);
+    } else {
+        out.push(d[0]);
+        if len > 1 {
+            out.push('.');
+            out.append(d[1..]);
+        }
+        out.push('e');
+        owned_int(out, point - 1);
+    }
 }

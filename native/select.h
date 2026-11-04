@@ -9,4 +9,14 @@ static inline uint8_t gj_available(void) {
     return 1;
 #endif
 }
+
+/* Runtime declarations and generated slice types precede user headers. */
+static inline int64_t gj_runtime_i64(int64_t value, sl_u8 out) {
+    if (out.len < GS_FMT_MAX) return -1;
+    return gs_fmt_i64(out.data, value);
+}
+static inline int64_t gj_runtime_f64(double value, sl_u8 out) {
+    if (out.len < GS_FMT_MAX) return -1;
+    return gs_fmt_f64(out.data, value);
+}
 #endif

@@ -14,3 +14,9 @@ This product includes fast_float by the fast_float authors and contributors,
 licensed under Apache-2.0 (alternatives MIT and BSL-1.0).
 See native/vendor/fast_float/LICENSE-APACHE and native/README.md.
 Original copyright and license notices are retained in the vendored sources.
+
+Float digit selection and layout in json_codec.goose are adapted from
+Goose stdlib/json.goose, revision eadca409f68210893f366e60d0c2f0dc29a339be,
+by Wouter van Oortmerssen and Goose contributors, licensed under Apache-2.0.
+The adaptations bypass application-defined formatting hooks.
+https://github.com/aardappel/goose
