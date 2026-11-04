@@ -62,130 +62,131 @@ CI exercises portable comparisons and a native recorder smoke run with tiny coun
 
 ## Recorded native results
 
-Measured source `06622d495175842914f7381b72fd6d855733acc3` against fixed `v0.1.2`
-(`3fa7b5275399641f8069698b6c097ea66cef7929`) on 2026-11-04. The candidate changes
-GCC/Clang integer conversion; the corpus, harness and build settings are matched.
-Every pass passed typed-decoder checksum/count/fixture-set validation.
-[Full provenance](results/wide-integers-native-2026-11-04/metadata.json).
+Measured source `52473a635952b12eddbb78b4d241b24d3d9f0b21` against fixed `v0.1.2`
+(`3fa7b5275399641f8069698b6c097ea66cef7929`) on 2026-11-04. This repeats the reviewed integer change with
+identical production code to the prior recording; no further optimization was
+introduced for this run. All thirteen fixtures passed typed-decoder checksum,
+iteration-count and fixture-set validation in every pass.
+[Complete provenance](results/release-013-native-2026-11-04/recording/metadata.json).
 
-Intel Core Ultra 7 258V, Linux x86-64, CPU 4 affinity; pinned Goose
-`eadca409f68210893f366e60d0c2f0dc29a339be`, GCC/G++ 16.2.1 and Rust 1.101.0-nightly.
-All three shuffled process passes requested 200,000 iterations, with fixture
-scaling above. Native CPU tuning applies to Goose/C++ and Rust. Requested and
-observed release profiles, source hashes and executable hashes are retained.
+Intel Core Ultra 7 258V, Linux x86-64, CPU4 affinity. Goose `eadca409f68210893f366e60d0c2f0dc29a339be`,
+GCC/G++ 16.2.1, Rust 1.101.0-nightly; native tuning on both Goose/C++ and Rust.
+Three shuffled process passes, seven batches each, 200,000 requested iterations
+with fixture scaling described above. Every one of the 3,276 batch averages is
+retained. Median ns/op across the three process-pass medians; lower is better.
 
-**Shared-host limitation:** the third pass suffered substantial scheduling
-contention. Child CPU/wall time was about 50% for both Goose processes and 68%
-for Rust, versus 98.5–99.2% in the first two passes. Third-pass Goose timings
-were often roughly twice as slow. No samples were discarded or corrected;
-all nine outputs and 3,276 batch averages contribute to these tables. The core
-was not isolated and frequency/turbo were not fixed. Independent review and
-our heavy correctness tests finished before timing; unrelated work could run.
-These results support neither statistical significance nor a reliable cross-library
-ranking. Close results, and differences on unchanged paths, require caution.
+A best-effort quiet CPU4 window was requested before launch and acknowledged
+while the series was running. Coordinated owners avoided new heavy CPU4 work;
+unrestricted HTTP/crypto jobs could still schedule there. A brief pre-launch
+snapshot showed no heavy CPU4 worker. There was no exclusive reservation or
+fixed frequency/turbo.
+
+**Residual contention:** baseline passes 1 and 3 had child CPU/wall ratios of
+83.5% and 83.7%, versus about 99% for every candidate process. This asymmetric
+scheduling loss can favor the candidate. Other processes ranged 98.8–99.3%,
+and batches still varied substantially. These ratios are diagnostics, never
+time corrections. All passes and regressions are included. Neither the
+aggregate percentage changes nor close cross-library results establish a
+reliable ranking or statistical significance. The earlier contended recording
+is also retained; this rerun is not an isolated-host measurement.
 
 ### Decode
 
-Median ns/op across all three process-pass medians; lower is better.
-
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 121.0 | 230.2 | 115.0 |
-| Escaped / Unicode | 223.6 | 474.9 | 323.1 |
-| 1,024 nonnegative integers | 11,420.1 | 28,043.9 | 19,680.8 |
-| 1,024 signed small integers | 12,043.2 | 28,151.1 | 20,245.5 |
-| 1,024 wide integers | 33,276.3 | 33,794.4 | 45,978.5 |
-| Mixed event | 2,578.2 | 4,314.9 | 4,710.8 |
-| 256 simple floats | 5,060.1 | 8,856.4 | 8,444.2 |
-| 256 wide-exponent floats | 8,831.7 | 16,220.5 | 21,459.2 |
-| 64-byte ASCII text | 122.0 | 218.0 | 161.0 |
-| 8 KiB sparse escapes | 2,041.8 | 2,664.2 | 3,323.4 |
-| 8 KiB ASCII text | 1,339.5 | 1,835.5 | 2,253.5 |
-| Dense escapes / Unicode | 14,762.2 | 22,899.8 | 32,827.8 |
-| 16 reversed fields | 493.2 | 1,019.1 | 863.2 |
+| Small record | 112.5 | 280.7 | 112.9 |
+| Escaped / Unicode | 228.0 | 323.4 | 247.7 |
+| 1,024 nonnegative integers | 11,467.5 | 26,372.3 | 16,502.6 |
+| 1,024 signed small integers | 10,082.1 | 19,386.5 | 16,113.9 |
+| 1,024 wide integers | 32,243.1 | 30,750.5 | 36,126.8 |
+| Mixed event | 2,531.8 | 3,713.6 | 4,685.7 |
+| 256 simple floats | 4,886.5 | 8,035.0 | 6,962.8 |
+| 256 wide-exponent floats | 8,531.8 | 15,962.4 | 22,669.4 |
+| 64-byte ASCII text | 116.6 | 231.0 | 170.6 |
+| 8 KiB sparse escapes | 1,583.3 | 2,636.6 | 3,310.9 |
+| 8 KiB ASCII text | 1,199.3 | 1,906.8 | 2,275.4 |
+| Dense escapes / Unicode | 14,479.1 | 24,368.9 | 26,196.2 |
+| 16 reversed fields | 435.7 | 1,016.8 | 833.3 |
 
 ### Encode
 
-Median ns/op across all three process-pass medians; lower is better.
-
 | Fixture | goose-json | sonic-rs | serde_json |
 | --- | ---: | ---: | ---: |
-| Small record | 55.0 | 76.7 | 57.3 |
-| Escaped / Unicode | 104.6 | 167.9 | 99.5 |
-| 1,024 nonnegative integers | 6,104.8 | 10,690.0 | 9,370.4 |
-| 1,024 signed small integers | 6,156.8 | 9,187.4 | 9,250.4 |
-| 1,024 wide integers | 16,843.4 | 19,163.3 | 17,351.3 |
-| Mixed event | 2,769.9 | 3,212.7 | 2,572.8 |
-| 256 simple floats | 11,517.2 | 17,743.1 | 10,102.6 |
-| 256 wide-exponent floats | 12,010.6 | 16,317.1 | 9,599.6 |
-| 64-byte ASCII text | 51.3 | 147.1 | 108.1 |
-| 8 KiB sparse escapes | 1,994.3 | 728.0 | 5,946.8 |
-| 8 KiB ASCII text | 833.3 | 709.2 | 5,247.4 |
-| Dense escapes / Unicode | 11,574.8 | 8,544.7 | 10,490.5 |
-| 16 reversed fields | 175.6 | 448.8 | 469.5 |
+| Small record | 51.1 | 64.9 | 56.2 |
+| Escaped / Unicode | 108.9 | 110.3 | 77.5 |
+| 1,024 nonnegative integers | 6,148.9 | 9,755.6 | 8,341.1 |
+| 1,024 signed small integers | 5,195.7 | 6,737.7 | 6,481.7 |
+| 1,024 wide integers | 15,424.2 | 16,747.9 | 16,735.1 |
+| Mixed event | 2,688.3 | 3,197.4 | 2,476.2 |
+| 256 simple floats | 10,818.4 | 14,676.9 | 8,967.2 |
+| 256 wide-exponent floats | 12,070.4 | 17,591.8 | 9,719.2 |
+| 64-byte ASCII text | 50.2 | 155.0 | 115.0 |
+| 8 KiB sparse escapes | 1,511.8 | 743.3 | 5,720.3 |
+| 8 KiB ASCII text | 743.1 | 711.1 | 5,513.9 |
+| Dense escapes / Unicode | 11,858.8 | 8,926.8 | 10,454.0 |
+| 16 reversed fields | 152.5 | 463.3 | 400.2 |
 
 ### Matched fixed-release comparison
 
-All thirteen fixtures are included. Negative changes mean less time; decoding
-and float/string kernels were not changed by this integer optimization. Their
-observed differences are not evidence of improvements to those algorithms.
+Times are ns/op. Negative changes mean less time. Decoder, float and string
+kernels are unchanged by the integer optimization; their observed timing
+changes must not be attributed to improvements to those algorithms.
 
 | Fixture | Decode release → current (change) | Encode release → current (change) |
 | --- | ---: | ---: |
-| Small record | 120.7 → 121.0 (+0.2%) | 55.9 → 55.0 (-1.6%) |
-| Escaped / Unicode | 242.9 → 223.6 (-7.9%) | 113.1 → 104.6 (-7.5%) |
-| 1,024 nonnegative integers | 11,845.9 → 11,420.1 (-3.6%) | 6,463.7 → 6,104.8 (-5.6%) |
-| 1,024 signed small integers | 12,074.5 → 12,043.2 (-0.3%) | 7,372.2 → 6,156.8 (-16.5%) |
-| 1,024 wide integers | 33,842.5 → 33,276.3 (-1.7%) | 29,976.3 → 16,843.4 (-43.8%) |
-| Mixed event | 2,738.1 → 2,578.2 (-5.8%) | 3,003.0 → 2,769.9 (-7.8%) |
-| 256 simple floats | 5,345.0 → 5,060.1 (-5.3%) | 12,193.9 → 11,517.2 (-5.5%) |
-| 256 wide-exponent floats | 9,521.5 → 8,831.7 (-7.2%) | 12,774.1 → 12,010.6 (-6.0%) |
-| 64-byte ASCII text | 129.8 → 122.0 (-6.0%) | 54.5 → 51.3 (-5.9%) |
-| 8 KiB sparse escapes | 2,067.3 → 2,041.8 (-1.2%) | 1,993.0 → 1,994.3 (+0.1%) |
-| 8 KiB ASCII text | 1,382.2 → 1,339.5 (-3.1%) | 876.3 → 833.3 (-4.9%) |
-| Dense escapes / Unicode | 17,036.3 → 14,762.2 (-13.3%) | 12,068.7 → 11,574.8 (-4.1%) |
-| 16 reversed fields | 540.4 → 493.2 (-8.7%) | 188.9 → 175.6 (-7.0%) |
+| Small record | 121.5 → 112.5 (-7.4%) | 55.8 → 51.1 (-8.4%) |
+| Escaped / Unicode | 236.0 → 228.0 (-3.4%) | 107.6 → 108.9 (+1.2%) |
+| 1,024 nonnegative integers | 12,025.9 → 11,467.5 (-4.6%) | 6,425.2 → 6,148.9 (-4.3%) |
+| 1,024 signed small integers | 11,834.2 → 10,082.1 (-14.8%) | 7,681.5 → 5,195.7 (-32.4%) |
+| 1,024 wide integers | 32,434.5 → 32,243.1 (-0.6%) | 29,355.2 → 15,424.2 (-47.5%) |
+| Mixed event | 2,616.5 → 2,531.8 (-3.2%) | 2,878.5 → 2,688.3 (-6.6%) |
+| 256 simple floats | 5,528.8 → 4,886.5 (-11.6%) | 12,342.5 → 10,818.4 (-12.3%) |
+| 256 wide-exponent floats | 8,918.6 → 8,531.8 (-4.3%) | 11,975.4 → 12,070.4 (+0.8%) |
+| 64-byte ASCII text | 111.9 → 116.6 (+4.2%) | 47.7 → 50.2 (+5.2%) |
+| 8 KiB sparse escapes | 1,940.6 → 1,583.3 (-18.4%) | 1,901.4 → 1,511.8 (-20.5%) |
+| 8 KiB ASCII text | 1,384.9 → 1,199.3 (-13.4%) | 871.6 → 743.1 (-14.7%) |
+| Dense escapes / Unicode | 14,766.4 → 14,479.1 (-1.9%) | 11,364.5 → 11,858.8 (+4.3%) |
+| 16 reversed fields | 524.8 → 435.7 (-17.0%) | 196.7 → 152.5 (-22.5%) |
 
-Wide-integer encoding decreased in every matched pass, including the contended
-third pass. This is evidence for this kernel on this distribution, rather than
-a claim about all integer sizes or machines. The aggregate median decreased
-43.8%; signed-small-integer encoding decreased 16.5%. Sparse-text encoding was
-0.1% slower in aggregate; no escaping code changed.
-
-| Wide-integer encoding | v0.1.2 ns/op | Candidate ns/op | Change |
+| Wide-integer encoding | v0.1.2 ns/op | Current ns/op | Change |
 | --- | ---: | ---: | ---: |
-| Pass 1 | 28,761.9 | 16,843.4 | -41.4% |
-| Pass 2 | 29,976.3 | 16,602.3 | -44.6% |
-| Pass 3 | 65,335.4 | 34,997.5 | -46.4% |
+| Pass 1 | 29,355.2 | 12,639.0 | -56.9% |
+| Pass 2 | 27,807.5 | 17,284.9 | -37.8% |
+| Pass 3 | 30,453.7 | 15,424.2 | -49.4% |
 
 ### Different APIs and formats
 
-Protobuf and borrowing DOM have separate contracts; neither is a like-for-like
-typed JSON implementation. DOM cannot losslessly represent every wide i64;
-negative Protobuf int64 values use ten-byte varints (not zigzag sint64).
-Times are ns/op with the same shared-host limitations.
+Protobuf and borrowing DOM have different contracts. Neither is a like-for-like
+typed JSON implementation; DOM loses precision for some wide i64 values and
+Protobuf uses binary data with different field/presence rules. Negative `int64`
+values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 | Fixture | JSON / Protobuf input bytes | Protobuf decode / encode | Borrowing DOM decode |
 | --- | ---: | ---: | ---: |
-| Small record | 38 / 11 | 60.2 / 33.4 | 87.0 |
-| Escaped / Unicode | 62 / 24 | 70.5 / 33.4 | 142.7 |
-| 1,024 nonnegative integers | 4022 / 1923 | 5,855.6 / 9,218.1 | 19,470.8 |
-| 1,024 signed small integers | 4538 / 6083 | 7,736.1 / 22,136.1 | 20,500.6 |
-| 1,024 wide integers | 19771 / 9669 | 10,433.8 / 33,496.2 | 55,068.6 |
-| Mixed event | 1187 / 954 | 1,392.1 / 641.9 | 2,815.2 |
-| 256 simple floats | 1581 / 2051 | 1,082.0 / 422.3 | 4,864.2 |
-| 256 wide-exponent floats | 5975 / 2051 | 868.9 / 432.1 | 16,321.1 |
-| 64-byte ASCII text | 97 / 70 | 63.7 / 34.4 | 134.8 |
-| 8 KiB sparse escapes | 8233 / 8205 | 757.5 / 378.0 | 15,958.8 |
-| 8 KiB ASCII text | 8225 / 8199 | 738.4 / 381.4 | 7,483.1 |
-| Dense escapes / Unicode | 8737 / 6663 | 9,169.2 / 330.7 | 17,340.6 |
-| 16 reversed fields | 135 / 31 | 148.2 / 140.4 | 364.1 |
+| Small record | 38 / 11 | 57.4 / 32.2 | 82.3 |
+| Escaped / Unicode | 62 / 24 | 49.7 / 24.1 | 148.4 |
+| 1,024 nonnegative integers | 4022 / 1923 | 5,401.8 / 8,298.2 | 19,137.1 |
+| 1,024 signed small integers | 4538 / 6083 | 5,529.4 / 16,299.2 | 17,691.6 |
+| 1,024 wide integers | 19771 / 9669 | 11,100.8 / 33,491.3 | 51,924.4 |
+| Mixed event | 1187 / 954 | 1,444.4 / 608.2 | 2,804.5 |
+| 256 simple floats | 1581 / 2051 | 1,076.1 / 379.0 | 4,478.3 |
+| 256 wide-exponent floats | 5975 / 2051 | 875.0 / 415.9 | 16,082.6 |
+| 64-byte ASCII text | 97 / 70 | 64.8 / 35.4 | 133.4 |
+| 8 KiB sparse escapes | 8233 / 8205 | 783.8 / 407.6 | 13,101.9 |
+| 8 KiB ASCII text | 8225 / 8199 | 765.4 / 415.0 | 6,771.5 |
+| Dense escapes / Unicode | 8737 / 6663 | 9,499.4 / 346.9 | 17,081.4 |
+| 16 reversed fields | 135 / 31 | 147.9 / 142.2 | 321.7 |
 
 ## Raw data and history
 
-The [wide-integer recording](results/wide-integers-native-2026-11-04) contains all
-nine process outputs, 3,276 batch averages and complete provenance. All passes,
-including the contended third pass, contribute to the current tables.
+The [release rerun](results/release-013-native-2026-11-04) contains all nine
+process outputs, source/executable hashes, scheduling metadata and 3,276 batch
+averages. Separate instrumented profiles never contribute benchmark latency.
+
+The [historical integer recording](results/wide-integers-native-2026-11-04/report.md)
+retains every sample, matched change and its explicit third-pass contention
+limits. It measures the same codec as this rerun. Absolute differences between
+recordings are not codec improvements.
 
 The [historical expanded-corpus controls](results/corpus-native-2026-11-04/report.md)
 measure identical production codecs with the expanded harness. Their

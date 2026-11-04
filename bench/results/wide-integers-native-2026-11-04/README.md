@@ -7,7 +7,7 @@ formatter uses bounded decimal blocks; public output and the harness are unchang
 All nine process outputs and all 3,276 batch averages are retained here.
 [Metadata](metadata.json) records exact source/executable hashes, requested and
 observed build profiles, process order, timings and passed typed-decode checks.
-[Full tables and matched changes](../../README.md#recorded-native-results).
+[Historical full tables and matched changes](report.md).
 
 From a full checkout at the measured source, with the pinned compiler:
 

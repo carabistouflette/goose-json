@@ -305,3 +305,28 @@ The third pass suffered substantial scheduling contention (Goose child CPU/wall
 about 50%, Rust 68%). No samples were discarded or corrected. Review and heavy
 correctness validation finished before timing, but the shared core had no
 exclusive reservation or fixed frequency. No universal ranking is claimed.
+
+## v0.1.3 release preparation
+
+The production tree is unchanged from reviewed main
+`52473a635952b12eddbb78b4d241b24d3d9f0b21`; the bounded integer kernel retains
+its independent review, byte oracles and GCC/Clang sanitizer evidence above.
+`make check` passed before the new timing series. CI on the release branch
+repeats the maintained normal/debug/portable, native sanitizer and bounded fuzz
+checks rather than introducing another private correctness campaign.
+
+The [shared-host rerun](../bench/results/release-013-native-2026-11-04) retains all
+thirteen fixtures, nine process outputs and 3,276 batch averages. Every typed
+decoder checksum/count/set check passed. Baseline processes in passes 1 and 3
+had child CPU/wall ratios near 83.5%, versus about 99% for candidate processes;
+this asymmetric scheduling loss can favor current results. All samples and
+regressions are included without correction. Courtesy coordination was
+acknowledged during the series; unrestricted HTTP/crypto work could still run.
+This does not establish exclusive isolation, statistical significance or a
+reliable ranking. Previous recordings and immutable release tags are retained.
+
+Four [separate profiles](../bench/results/release-013-native-2026-11-04/PROFILING.md)
+ran on CPU3 after timing completed. Their instrumented entry validates full
+input and exact roundtrips before encoding; source/binary hashes, counts and
+checksums are retained. They identify numeric layout and escaping as narrow
+follow-up investigation targets without supplying latency or speedup claims.
