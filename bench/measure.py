@@ -11,6 +11,7 @@ import random
 import shutil
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -123,7 +124,7 @@ def main():
             "rustflags": rustflags, "rust_profile": artifact["profile"],
             "goose_cache": "isolated per recording",
             "inherited_c_cpp_flags": False,
-            "process_order_seed": 219, "runs": [],
+            "process_order_seed": 219, "runs": [], "process_timings": [],
             "executable_sha256": {name: hashlib.sha256(Path(command[0]).read_bytes()).hexdigest() for name, command in commands.items()},
             "source_sha256": {},
         }
@@ -141,8 +142,18 @@ def main():
                     command = ["taskset", "-c", str(args.cpu)] + command
                 filename = f"run-{index}-{name}.md"
                 print(filename, flush=True)
+                cpu_before = os.times()
+                started = time.perf_counter()
                 with (output / filename).open("w") as stream:
                     run(command, env=env, stdout=stream)
+                elapsed = time.perf_counter() - started
+                cpu_after = os.times()
+                child_cpu = ((cpu_after.children_user - cpu_before.children_user) +
+                             (cpu_after.children_system - cpu_before.children_system))
+                metadata["process_timings"].append({
+                    "file": filename, "wall_seconds": elapsed,
+                    "child_cpu_seconds": child_cpu if os.name == "posix" else None,
+                })
             if source_hashes(output) != hashes:
                 raise RuntimeError("sources changed during measurement; discard this measurement")
             (output / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
