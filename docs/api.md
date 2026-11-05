@@ -68,8 +68,8 @@ offset; errors caught before the reader may not.
 
 Parsing uses a streaming reader rather than a document tree. Field lookup
 compares input keys with declared names, so wide objects need more comparisons.
-Unescaped strings are copied into their owner. Native escaped strings use a
-fixed 4 KiB scratch buffer; float arrays use batches of 64 values. Goose owns
+Unescaped strings are copied into their owner. Native paths use a fixed 4 KiB
+scratch buffer for escaped strings and batches of 64 values for float arrays. Goose owns
 result storage and lifetimes in all modes.
 
 GCC/Clang builds use private C++ kernels for selected operations. TinyCC and

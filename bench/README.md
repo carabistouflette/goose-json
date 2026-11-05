@@ -63,6 +63,8 @@ Its baseline and candidate use different absolute build paths/cache history;
 small differences do not establish an algorithmic gain. Newer separate-process
 encode/decode experiments use matched paths, but do not repair old recordings.
 
+<a id="corpus-and-equivalence"></a>
+
 ## Comparison contracts
 
 | Implementation | Result and validation |

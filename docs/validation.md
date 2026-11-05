@@ -23,7 +23,10 @@ platform is Linux x86-64; see the [API limits](api.md#validation-and-limits).
 [Native testing](../native/README.md#testing) covers optional longer fuzz campaigns.
 CI uses bounded campaigns and no speed thresholds.
 
-[Historical audits](validation-history.md) retain commit-specific one-off checks,
+<a id="maintainability-cleanup"></a>
+
+[Historical audits](validation-history.md), including the
+[maintainability cleanup](validation-history.md#maintainability-cleanup), retain commit-specific one-off checks,
 reviews and failed optimization attempts. Their test counts and timing statements
 apply to the named sources, not automatically to future commits. Current benchmark
 applicability is checked separately in the [source comparison](../bench/CURRENTNESS.md).
