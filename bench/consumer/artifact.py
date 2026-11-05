@@ -6,7 +6,6 @@ Optional Linux diagnostic, not a production-latency or optimization benchmark.
 Consumer sources/pins are extracted from immutable Git objects, never edited live.
 """
 import argparse
-import csv
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -15,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import ssl
 import subprocess
 import tempfile
@@ -118,6 +118,11 @@ def main():
                 'flags': 'Goose -O2 --standalone, GCC; native dependencies Release defaults; portable CPU tuning',
                 'scope': 'Instrumented nested wall-clock spans for existing artifact::execute in fresh processes against loopback HTTPS. Not production latency, CPU sampling or a before/after optimization comparison. JSON span covers deserialize_into call only, excluding metadata declaration, validation and owner cleanup; authenticate span ends in its defer before final owner rewind. Full execute includes normal cleanup but excludes CLI/startup/signal guard setup/stop. Clock/hook instrumentation perturbs execution; no Amdahl/speedup bound or allocation inference.',
                 'validation': 'pending'}
+    tracked = subprocess.run(['git', '-C', str(ROOT), 'show',
+                              metadata['harness_revision'] + ':bench/consumer/artifact.py'],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    metadata['harness_matches_revision'] = (tracked.returncode == 0 and
+        hashlib.sha256(tracked.stdout).hexdigest() == metadata['harness_sha256'])
     try:
         with tempfile.TemporaryDirectory(prefix='consumer-', dir=output) as directory:
             scratch = Path(directory)
@@ -136,7 +141,6 @@ def main():
             spec.loader.exec_module(fixture)
             shim = scratch / 'transport.o'
             flags = capture(['pkg-config', '--cflags', 'libcurl'])
-            import shlex
             run(['gcc', '-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', *shlex.split(flags),
                  '-c', str(consumer / 'tests/transport.c'), '-o', str(shim)])
             helper = scratch / 'phases.c'
@@ -244,6 +248,12 @@ def main():
                 server.server_close()
                 thread.join(timeout=5)
             metadata['records'] = records
+            expected_sources = dict(metadata['consumer_source_sha256'])
+            expected_sources.update(metadata['instrumented_source_sha256'])
+            if any(sha(consumer / p) != value for p, value in expected_sources.items()):
+                raise RuntimeError('consumer snapshot changed unexpectedly')
+            if sha(Path(__file__).resolve()) != metadata['harness_sha256']:
+                raise RuntimeError('profile harness changed during execution')
             metadata['validation'] = 'passed: original functional control; two authenticated-ordering failures with zero HTTP/destination mutation; seven signed full-workflow profiles with exact published payload/digest/status and no staging residue'
     finally:
         (output / 'results.json').write_text(json.dumps(metadata, indent=2) + '\n')
