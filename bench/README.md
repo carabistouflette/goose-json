@@ -56,6 +56,13 @@ Small records and `text-short` use the requested iterations per sample; integers
 
 The recorder clears inherited C/C++ flags, Cargo profile overrides and custom toolchain/stdlib overrides, uses a fresh Goose build cache shared by candidate and baseline for that recording, builds first, freezes three independent executables (before/after/comparison), then shuffles process order for each pass with seed 219. It selects and checks the actual Cargo-produced executable, isolates native and portable Cargo outputs, hashes all measured binaries, Goose/Rust sources, native sources/headers/vendors, CMake, the package sidecar, fingerprint script and compiler wrappers, and rejects source changes during compilation or measurement. This prevents a concurrent smoke build from replacing the measured executable. The exact baseline commit defaults to `05b81674e101e349ea40a379011418963a7a9794`; `--baseline` selects another compatible revision. Published records explicitly identify their selected baseline; pass `--baseline v0.1.2` for this recording’s fixed release. Baseline and candidate use the same current corpus, harness, Goose compiler and native C options. Both candidate and baseline use the native backend; exact flags and source hashes are recorded. Every completed pass must also have matching typed-decoder fixture sets, iteration counts and consumption checksums across both Goose revisions, serde, Sonic and Protobuf. A mismatch stops recording, retains raw data/provenance and marks validation failed in metadata. Encoding checksums are not equated across libraries because valid number spelling can differ.
 
+Older before/after recorders do not match absolute build paths/cache history.
+A later [float-suffix investigation](results/float-suffix-native-2026-11-05)
+includes identical-source controls and a separate matched-build recorder that
+produced byte-identical A/A executables. Historical data remains unchanged;
+small shifts are not proof of algorithmic effects, and no control is subtracted
+from a candidate measurement. See that report for the exact build procedures.
+
 The summary below is the median of **three process-pass medians**, each based on seven batch averages. All 21 batches are retained; this is not a percentile latency distribution or a confidence interval. Within-process operation order is fixed: Goose interleaves decode/encode/DOM; Rust measures APIs sequentially. Process shuffling, warmup, repeated runs and CPU pinning reduce but do not eliminate scheduling, order, cache and thermal effects. CPU frequency/turbo were not fixed and the core was not isolated from other processes. No universal winner or statistical-significance claim is made. This remains a synthetic corpus, not production-traffic replay.
 
 CI exercises portable comparisons and a native recorder smoke run with tiny counts, without timing thresholds. Production binaries keep portable defaults unless the application explicitly opts into native CPU tuning.
@@ -178,6 +185,11 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 | 16 reversed fields | 135 / 31 | 147.9 / 142.2 | 321.7 |
 
 ## Raw data and history
+
+The [float-suffix experiments and controls](results/float-suffix-native-2026-11-05)
+retain all 8,190 batch averages, including the matched-build A/A control and final
+comparison. Neither native variant was adopted. Canonical spelling regressions
+and the matched-build recorder remain; production formatting is unchanged.
 
 The [rejected prefix-reuse experiments](results/sparse-prefix-native-2026-11-05)
 retain the initial probe, confounded broad series and two short alternating
