@@ -172,6 +172,14 @@ static inline void gj_impl_prefix(sl_u8 input, int64_t at, gs_i64 *position, uin
 /* Small copies avoid an out-of-line memcpy for each short escaped-text run.
    Every load/store is bounded by n, including at a guard-page boundary. */
 static inline void gj_copy(uint8_t *to, const uint8_t *from, int64_t n) {
+    /* Short plain runs are common between dense escapes. All three accesses
+       stay inside the run; repeated accesses for n=1 or n=2 are harmless. */
+    if (n > 0 && n < 4) {
+        to[0] = from[0];
+        to[n >> 1] = from[n >> 1];
+        to[n - 1] = from[n - 1];
+        return;
+    }
     if (n >= 32) {
         memcpy(to, from, (size_t)n);
         return;
