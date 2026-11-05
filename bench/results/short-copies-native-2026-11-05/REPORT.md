@@ -160,7 +160,8 @@ loads/stores cover lengths 0..255, including zero-length protected pointers and
 short runs at the page edge. Existing exact string/chunk/canary/API tests remain.
 
 Root GCC/Clang ASan/UBSan maintained native suites and public normal/debug/portable
-checks passed for the candidate. Fresh independent Sol 6.1 ultra review found
+checks passed for the candidate. They passed again after restoring the original
+helper with the new copy/guard tests retained. Fresh independent Sol 6.1 ultra review found
 no correctness, security or maintainability blockers and passed focused baseline/
 candidate differential ASan/UBSan checks in scalar, SSE2 and AVX2 builds with both
 compilers: 2,026,974 API calls per build, including escaping/unquoting, short runs,
