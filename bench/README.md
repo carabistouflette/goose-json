@@ -186,6 +186,11 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 ## Raw data and history
 
+The [encoder allocation/copy diagnostic](results/encoder-copies-2026-11-05)
+records phase-scoped operation counts across thirteen fixtures, with positive
+controls and explicit coverage limits. It found no allocation-focused production
+change to justify; these counts are not latency or memory-use measurements.
+
 The [float-suffix experiments and controls](results/float-suffix-native-2026-11-05)
 retain all 8,190 batch averages, including the matched-build A/A control and final
 comparison. Neither native variant was adopted. Canonical spelling regressions
