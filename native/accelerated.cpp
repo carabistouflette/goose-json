@@ -27,7 +27,15 @@ extern "C" gj_decimal gj_cpp_decimal(double value) { return gj_decimal_value(val
 static inline int64_t gj_scientific(double value, sl_u8 output) {
     char *first = reinterpret_cast<char *>(output.data);
     char *end = goose_json_dragonbox::dragonbox::to_chars_n(value, first);
-    for (char *p = end; p != first;) {
+    // Binary64 scientific output ends in E, an optional minus, and at most
+    // three exponent digits. Unroll this bounded suffix walk.
+    char *p = end;
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC unroll 5
+#endif
+    for (unsigned i = 0; i < 5; ++i) {
+        if (p == first)
+            break;
         --p;
         if (*p == 'E') {
             *p = 'e';

@@ -44,6 +44,20 @@ static void roundtrip(double value) {
 }
 
 static void numbers() {
+    // Canonical bytes at fixed/scientific and exponent-width boundaries.
+    const struct { double value; const char *text; } spellings[] = {
+        {0.0, "0.0"}, {-0.0, "-0.0"}, {1e-5, "0.00001"}, {1e-6, "1e-6"},
+        {1e16, "1e16"}, {1e99, "1e99"}, {1e100, "1e100"}, {1e308, "1e308"},
+        {1e-9, "1e-9"}, {1e-10, "1e-10"}, {1e-99, "1e-99"}, {1e-100, "1e-100"},
+        {5e-324, "5e-324"}, {-5e-324, "-5e-324"},
+        {1.7976931348623157e308, "1.7976931348623157e308"}
+    };
+    for (const auto &item : spellings) {
+        uint8_t output[32];
+        const auto count = gj_number(item.value, {output, 32});
+        assert(count == (int64_t)strlen(item.text));
+        assert(memcmp(output, item.text, (size_t)count) == 0);
+    }
     uint8_t packed[9];
     auto *value = (gs_f64 *)(void *)(packed + 1);
     for (const char *bad : {"", "-", "+1", ".1", "01", "1.", "1e", "1e+", "nan", "inf", "1e9999"}) {
