@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Check native short-copy bytes across alignments and guard-page edges; retain
+  rejected short-copy optimization and complete matched encode/decode results.
+
 - Add nested/large-output encoder correctness probes, separate throughput and
   process peak-RSS recordings, and a bounded CI smoke; retain the baseline codec.
 

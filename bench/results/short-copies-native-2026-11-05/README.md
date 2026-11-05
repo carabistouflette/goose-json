@@ -1,4 +1,16 @@
-# Short escaping-copy candidate: acceptance protocol
+# Short copy experiment: baseline retained
+
+One bounded one- to three-byte copy candidate passed correctness review but
+failed the precommitted performance gate. Dense encoding did not improve in
+every series or reach the required 5% summary gain. Production is restored to
+v0.1.3; stronger copy/canary/guard tests and the bidirectional recorder remain.
+
+[Complete results, methods and reproduction](REPORT.md) retain all **6,552 batch
+averages**, including the identical-source control and all encoding/decoding
+fixtures. No timing is subtracted or selected away. The policy below was committed
+before either recording at `1ba4e93`.
+
+## Premeasurement acceptance protocol
 
 This experiment tests one native implementation change: copy one- to three-byte
 plain runs with first/middle/last byte accesses. Input and output spans remain
@@ -32,4 +44,4 @@ These are conservative engineering acceptance thresholds, not statistical
 significance tests or CI speed thresholds. The shared host has no exclusive
 core reservation or fixed frequency/turbo. Layout/cache/scheduling/thermal
 variation remains possible; no universal ranking or causal attribution to
-unchanged paths is claimed. Both complete recordings will be retained.
+unchanged paths is claimed. Both complete recordings are retained.
