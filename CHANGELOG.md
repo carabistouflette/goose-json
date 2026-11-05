@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Strengthen native string encoding coverage for exact Unicode/escape bytes,
+  prefix and output-chunk boundaries, and empty output on invalid UTF-8 tails.
+- Retain rejected prefix-reuse experiments and paired encoding measurements;
+  keep the existing production writer after repeatable dense-text regressions.
+
 ## 0.1.3
 
 - Convert wide signed integers using bounded eight-digit blocks on GCC/Clang;

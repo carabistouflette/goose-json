@@ -179,6 +179,12 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 ## Raw data and history
 
+The [rejected prefix-reuse experiments](results/sparse-prefix-native-2026-11-05)
+retain the initial probe, confounded broad series and two short alternating
+encoder-pair follow-ups across all thirteen fixtures. Both variants regressed
+dense text; the production writer was retained. All 9,828 batch averages and
+regressions remain available. These experiments do not replace the tables above.
+
 The [release rerun](results/release-013-native-2026-11-04) contains all nine
 process outputs, source/executable hashes, scheduling metadata and 3,276 batch
 averages. Separate instrumented profiles never contribute benchmark latency.

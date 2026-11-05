@@ -207,7 +207,7 @@ fn test_text_encoding() {
     // The fused writer must preserve standard JSON escaping byte-for-byte.
     for byte in 128 {
         var value = json_codec::Text { bytes: [] };
-        value.bytes.append("abcdefghijklmnopqrstuvwxyz0123456789");
+        value.bytes.append("abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789");
         value.bytes.push(byte as! u8);
         value.bytes.append("é😀\n\"\\");
         var expected: u8[>..] = [];
@@ -217,6 +217,23 @@ fn test_text_encoding() {
         var decoded = json_codec::Text { bytes: [] };
         assert(json_codec::deserialize_into(actual, decoded).len == 0);
         assert(decoded.bytes[..] == value.bytes[..]);
+    }
+}
+
+fn test_text_prefix_boundaries() {
+    let lengths: i64[7] = [0, 31, 32, 33, 63, 64, 72];
+    for length in lengths {
+        for unicode in 2 {
+            var value = json_codec::Text { bytes: [] };
+            var remaining = length;
+            if unicode > 0 && length >= 6 { value.bytes.append("é😀"); remaining -= 6; }
+            for i in remaining { value.bytes.push('a'); }
+            for i in 128 { value.bytes.append("\n\"\\é😀"); }
+            var expected: u8[>..] = [];
+            json::format_string(expected, value.bytes);
+            let actual, error = json_codec::serialize(value);
+            assert(error.len == 0 && actual[..] == expected[..]);
+        }
     }
 }
 
@@ -296,10 +313,19 @@ fn test_text_chunk_boundaries() {
         var value = json_codec::Text { bytes: [] };
         for i in 4090 + offset { value.bytes.push('a'); }
         value.bytes.append("\n\"\\é😀");
+        // Keep multiple escape chunks even when the large prefix is reused.
+        for i in 4090 + offset { value.bytes.push('b'); }
+        value.bytes.append("\n\"\\é😀");
         let text, error = json_codec::serialize(value);
-        assert(error.len == 0);
+        var expected: u8[>..] = [];
+        json::format_string(expected, value.bytes);
+        assert(error.len == 0 && text[..] == expected[..]);
         var back = json_codec::Text { bytes: [] };
         assert(json_codec::deserialize_into(text, back).len == 0 && back.bytes[..] == value.bytes[..]);
+        // Prefix reuse must not skip invalid bytes after the first escape.
+        value.bytes.push(0xff);
+        let invalid, invalid_error = json_codec::serialize(value);
+        assert(invalid.len == 0 && invalid_error.len > 0);
     }
 }
 
@@ -311,6 +337,7 @@ fn main() {
     test_utf8_validation();
     test_prefix_scanner();
     test_text_encoding();
+    test_text_prefix_boundaries();
     test_integers();
     test_float_chunks();
     test_text_chunk_boundaries();

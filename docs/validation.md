@@ -330,3 +330,36 @@ ran on CPU3 after timing completed. Their instrumented entry validates full
 input and exact roundtrips before encoding; source/binary hashes, counts and
 checksums are retained. They identify numeric layout and escaping as narrow
 follow-up investigation targets without supplying latency or speedup claims.
+
+## Rejected sparse-prefix experiments
+
+The [complete experiment record](../bench/results/sparse-prefix-native-2026-11-05)
+retains all 9,828 timed batch averages from a short probe, a broad matched series
+and two alternating encoder-pair recordings. All thirteen fixtures, regressions,
+source/executable hashes and validation results are retained. The broad series
+was confounded by large changes on untouched paths; neither that series nor
+small changes on unrelated paths are treated as evidence of algorithmic gains.
+The short process pairs also retain shared-host/frequency/layout limitations.
+
+Both variants passed correctness checks but caused repeatable dense-encoding
+regressions, including the conditional variant that preserved short-prefix
+block boundaries. Neither is adopted. The production writer is restored
+byte-for-byte to immutable `v0.1.3`, `aae48035f73e09b51011950ff12bfe424e0ec921`.
+Native kernels, API contracts and release tags are unchanged.
+
+Independent Sol 6.1 ultra review of the first prototype found no blocking
+correctness/security/API/KISS findings. Its 4,682 Python-oracle cases passed
+TinyCC normal/debug, GCC normal/debug, Clang normal/debug and forced-portable
+GCC/Clang debug; immutable baseline also passed GCC/Clang debug. Coverage included
+630 malformed UTF-8 cases, exact Unicode/escape bytes, multiple chunks, nested
+empty-output failures and ownership. Its small maintained-test coverage finding
+was fixed: the long-prefix test now retains a suffix that needs multiple output
+chunks even when a prefix is skipped.
+
+The retained tests also cover ASCII/Unicode prefixes around 32/64 bytes, exact
+standard JSON output at chunk boundaries, invalid UTF-8 after escapes, and the
+native threshold. Normal/debug/portable suites and end-to-end Clang ASan/UBSan
+(generated C, pinned runtime and native library) passed for both tested variants
+and again for the final retained writer with the stronger tests. No unchanged
+SIMD/floating fuzz campaign was repeated. CI continues the maintained native
+sanitizer and bounded fuzz checks.
