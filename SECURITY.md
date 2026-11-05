@@ -1,31 +1,28 @@
 # Security
 
-Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/carabistouflette/goose-json/security/advisories/new).
-Please include the affected commit, Goose/compiler versions, platform and a
-minimal reproducer. Keep exploit details out of public issues until a fix is
-available.
+Use [GitHub private vulnerability reporting](https://github.com/carabistouflette/goose-json/security/advisories/new)
+for suspected vulnerabilities. Include the affected commit, compiler versions,
+platform and a small reproducer. Keep exploit details out of public issues until
+a fix is available.
 
-## Input boundary
+## Input and ownership boundaries
 
-The public deserialization functions validate UTF-8 and reject inputs above
-1 MiB. Float tokens are limited to 128 bytes before conversion. Missing,
-duplicate and unknown fields are errors. Native kernels receive bounded slices;
-Goose owns storage and checks builder growth. Returned values may be partial
-after a decoding error and must be discarded. Serialization errors return empty
-output. Diagnostics and numeric output use byte operations and bounded runtime
-primitives so application formatting overloads cannot erase errors or alter JSON.
+Decoding checks UTF-8 and rejects input above 1 MiB. Floating-point tokens are
+limited to 128 bytes. Missing, duplicate and unknown fields fail. Discard a value
+after a decoding error; it may be partial. Serialization failure returns empty
+output and an error. Formatting overloads cannot erase diagnostics or alter
+numeric JSON output.
 
-These are input/work limits, not a fixed allocator budget. Schemas can expand
-small JSON values into larger in-memory results. Serialization has no output cap.
-See the [API contract](docs/api.md) for supported types and ownership rules.
+These input limits are not a memory budget. Schemas can expand small wire values
+into larger owned results. Serialization has no output cap. See the
+[API](docs/api.md) for supported types and exact behavior.
 
-## Checks
+## Validation
 
-The public API is tested through TinyCC, native and forced-portable builds.
-CI also runs `make test-debug` in runner and compiled modes, enabling Goose's
-debug overflow, cast-range and tag checks. `make test-portable` also exercises
-compiled portable paths and standalone runtime linkage.
-Native checks use GCC/Clang ASan/UBSan, guard pages and float bit-pattern tests.
-The [native fuzzer](native/README.md#testing) runs in CI and can be run locally for
-longer campaigns. Vendored dependencies are pinned with their original notices;
-see [native dependency details](native/README.md#vendored-dependencies).
+CI exercises TinyCC, GCC/Clang and the forced-portable path, including Goose's
+debug checks. Native tests use ASan/UBSan, exact-byte oracles, short buffers,
+unaligned storage, guard pages and float bit patterns. A bounded native fuzzer
+runs in CI. These checks do not establish correctness for every input or platform.
+
+[Validation commands](docs/validation.md) · [Native testing](native/README.md#testing)
+· [Dependency notices](NOTICE)

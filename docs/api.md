@@ -1,44 +1,77 @@
-# API reference
+# API
 
-[← goose-json](../README.md)
+[Quickstart](../README.md#quickstart) · [Runnable example](../examples/item.goose)
 
-## Types and behavior
+## Decode and encode
 
-- Struct roots and nested structs map to objects using exact, case-sensitive field names. No custom mapping is needed.
-- Supported fields: `i64`, `bool`, finite `f64`, owned `json_codec::Text`, nested structs, and grow-only arrays `i64[>..]`, `bool[>..]`, `f64[>..]`.
-- `Text { bytes: ... }` owns its UTF-8 byte builder. Decoded results outlive the source JSON, including escaped strings. All other string/array representations, integer widths, nullable fields, maps, enums, and arrays of records/text are outside this initial API; unsupported types fail at compile time.
-- Every field is required, including fields with Goose defaults. Missing, duplicate, or unknown fields are errors. Escaped keys are decoded before comparison. No numeric/string/bool coercion occurs. An `i64` requires integer notation: `1.0` and `1e0` are rejected.
-- Invalid JSON, invalid UTF-8, lone surrogate escapes, trailing data, and floats that round to non-finite values are errors. Integer limits are checked before arithmetic can overflow. Finite rounding is accepted, including underflow to signed zero. Floating-point tokens longer than 128 bytes are rejected before upstream conversion. Errors include a byte offset when produced by that reader.
-- `deserialize<T>(text)` returns `(value, error)`. Empty error means success. On error the value may be partial: discard it. The convenience function accepts ordinary structs; Goose root structs cannot be returned by value.
-- `deserialize_into(text, destination)` returns an error byte builder and also accepts `root struct` destinations, supported scalars, and supported scalar arrays. Serialization likewise accepts these types directly. Use `var destination = Type { .. };`. It replaces encountered strings and arrays, but may leave partial changes on failure. Always check the error before use. Root structs allow several independently growing fields; ordinary structs must follow Goose's rule that a resizable field is last.
-- `serialize(value)` takes a mutable reference (ordinary Goose call syntax) and returns `(text, error)`. Field declaration order determines output order. Failure returns empty output. Non-finite floats and invalid UTF-8 in `Text` are rejected. Signed zero formatting follows the standard writer. JSON diagnostics and numeric output do not invoke application-defined formatting overloads.
-
-## Cost and limits
-
-Parsing uses Goose's streaming reader, with no document tree. Field dispatch is a linear comparison over the compile-time expanded fields: O(input bytes + object members × schema fields). It allocates seen-field flags per object, scratch storage for escaped keys/strings, and owned text/array results. Unescaped strings are copied once into their owner. Native escaped strings stream through a fixed 4 KiB buffer into owned storage; they do not allocate a second full-string scratch buffer. Native float arrays format bounded batches of 64 values. Serialization appends to a checked grow-only builder, with compile-time expanded field access. The portable implementation uses the standard reader and digit-generation primitives where appropriate. Numeric layout is owned by this package; a bounded C integer kernel and runtime float adapter bypass application formatting hooks. TinyCC retains the runtime integer formatter.
-
-Floating-point tokens are limited to 128 bytes (`MAX_NUMBER_BYTES`) before the upstream reader runs, bounding its arbitrary-precision conversion cost and preventing its saturated-exponent edge case. This accepts every finite f64 output produced by the writer but intentionally rejects longer valid JSON numbers. Input is limited to 1 MiB (`MAX_INPUT_BYTES`) before parsing and is checked for UTF-8 in a linear pass. Unknown fields fail immediately rather than walking arbitrary nested input. Recursion follows the finite, statically known schema; no recursive reference graphs are supported. The input cap bounds accepted wire size, not an exact allocator budget: wide schemas and tiny scalar arrays can expand in memory. Serialization has no output-size cap.
-
-## Reading into an existing destination
-
-Use `deserialize_into` for `root struct` types, scalars, arrays, or a destination
-you already own:
-
-```goose
-var destination = Item { .. };
-let error = json_codec::deserialize_into(input, destination);
-if error.len > 0 { print(error); return; }
+```text
+deserialize<T>(input)          -> value, error
+deserialize_into(input, value) -> error
+serialize(value)              -> output, error
 ```
 
-An empty error builder signals success. See the
-[quick start](../README.md#usage) for `deserialize<T>` and `serialize`. The [example program](../examples/item.goose) exits with a nonzero
-status on failure.
+An empty error means success. Errors and output are owned byte builders.
 
-## Implementation
+`deserialize<T>` constructs an ordinary struct. `deserialize_into` writes into
+an existing destination and also accepts `root struct` types, supported scalars
+and scalar arrays. It replaces encountered strings and arrays. A decode failure
+may leave partial changes; discard that value. Previously owned text remains
+independent of the original JSON input.
 
-The API uses Goose's `const for` field reflection. Native builds use vendored
-Dragonbox, fast_float and simdutf; the TinyCC runner uses the Goose fallback.
-See [native build details and dependency licenses](../native/README.md).
+`serialize` accepts a mutable reference using ordinary Goose call syntax. It
+writes keys in field declaration order. Failure returns empty output.
+Diagnostics and numeric output do not call application formatting overloads.
 
-The library addresses the automatic mapping requested in
-[Goose discussion #219](https://github.com/aardappel/goose/discussions/219).
+## Types and field rules
+
+Supported values are structs, nested structs, `json_codec::Text`, `i64`, finite
+`f64`, `bool`, and grow-only arrays of those three scalar types. `Text.bytes` is
+an owned UTF-8 byte builder. Other integer widths, borrowed strings, nullable
+values, maps, enums and arrays of records/text are unsupported.
+
+Keys are case-sensitive. Every field is required, including fields with Goose
+defaults. Missing, duplicate and unknown fields fail. Escaped key spellings are
+decoded before comparison. There is no coercion: an `i64` rejects `1.0`, `1e0`,
+booleans and strings.
+
+Ordinary Goose structs require their resizable field to be last. A `root struct`
+can have several independently growing fields, but cannot be returned by value;
+use `deserialize_into`. For example, the complete program in
+[examples/into.goose](../examples/into.goose) reads a root struct and a scalar array:
+
+```sh
+goose run examples/into.goose
+```
+
+Run repository examples from a clone using the compiler in
+[GOOSE_REVISION](../GOOSE_REVISION); they import this checkout. The quickstart
+instead imports the exact released v0.1.3 commit.
+
+## Validation and limits
+
+| Boundary | Behavior |
+| --- | --- |
+| Input size | At most 1,048,576 bytes, checked before parsing |
+| Float token | At most 128 bytes, checked before conversion |
+| Integers | Full signed `i64` range; overflow rejected |
+| Floating point | Finite rounding accepted, including underflow to signed zero; non-finite results rejected |
+| Text | UTF-8 validated; malformed escapes and lone surrogates rejected |
+| Object shape | Required fields only; duplicate/unknown fields and trailing data rejected |
+| Serialization | No output-size cap; invalid UTF-8/non-finite values produce empty output and an error |
+
+The input cap is not a fixed allocation budget: many small values or wide schemas
+can require more storage than their JSON text. Recursion follows the finite
+schema; recursive reference graphs are unsupported. Reader errors include a byte
+offset; errors caught before the reader may not.
+
+## Implementation notes
+
+Parsing uses a streaming reader rather than a document tree. Field lookup
+compares input keys with declared names, so wide objects need more comparisons.
+Unescaped strings are copied into their owner. Native paths use a fixed 4 KiB
+scratch buffer for escaped strings and batches of 64 values for float arrays. Goose owns
+result storage and lifetimes in all modes.
+
+GCC/Clang builds use private C++ kernels for selected operations. TinyCC and
+`GOOSE_JSON_FORCE_PORTABLE` use the Goose fallback; CMake/C++ build dependencies
+still apply. See [native build details](../native/README.md).

@@ -1,13 +1,50 @@
 # Contributing
 
-Keep the API small, pure, and explicit. Applications own file/process I/O. Prefer standard-library parsing and runtime formatting primitives; JSON errors and numeric output must remain independent of application formatting overloads. Native acceleration must remain a private, bounded kernel with a portable Goose fallback; preserve the public validation and ownership contract. Discuss additions to the supported type set before broadening it.
+Keep changes focused. Use branches such as `fix/...`, `feat/...` or `docs/...`
+and Conventional Commits, for example `fix: reject duplicate keys`. One commit
+should describe one coherent change. Do not commit credentials, generated
+binaries, compiler caches or private workspace notes.
 
-Use focused branches (`feat/...`, `fix/...`, `docs/...`) and Conventional Commits: `feat: add ...`, `fix: reject ...`, `docs: clarify ...`, `test: cover ...`, `chore: update ...`. Subjects are imperative; commits contain one coherent change. Use semantic versions when a reviewed release is ready; no stability guarantee exists before 1.0.
+## Checks
 
-For behavior changes, add a public API regression in `tests/codec.goose` or `tests/formatting.goose` (the latter installs consumer formatting overloads). Run `make format`, `make check test test-debug`, and `git diff --check`. Native changes also require `make test-native CXX=clang++`; `make format` refreshes the native source fingerprint used by Goose’s package cache. Tests must exercise real public API behavior, including malformed input and ownership. Request an independent review, fix actionable findings, and keep main passing CI. Never commit credentials, generated compiler output, or private workspace notes.
+Use the compiler in [GOOSE_REVISION](GOOSE_REVISION). `make setup` builds it;
+Goose source builds need CMake 3.27+ and a C/C++20 toolchain. With an existing
+compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
 
-Compiler changes require a reviewed full upstream commit in `GOOSE_REVISION` and full validation. CI builds that exact revision with optional graphics/audio disabled. Report vulnerabilities privately through GitHub's security advisory reporting when enabled; avoid public exploit details before a fix is available.
+```sh
+make format
+make check test test-debug test-portable
+```
+
+For native changes, also run:
+
+```sh
+make test-native CXX=clang++
+make test-native CXX=g++
+```
+
+[Native testing](native/README.md#testing) describes bounded fuzz checks.
+`make format` updates the native package's cache hash; `make check` rejects a stale
+hash and checks the benchmark source comparison. Add public behavior regressions
+in `tests/codec.goose` or `tests/formatting.goose`. The latter installs application
+formatting overloads. Test malformed input, ownership and empty output on errors.
+
+## Design and review
+
+Keep file/process I/O in the application. Preserve the documented type set,
+validation, ownership and error rules. Native acceleration stays private, bounded
+and backed by a portable implementation. Diagnostics and numeric output must not
+invoke application formatting overloads. Discuss API/type additions first.
+
+Get an independent review, fix actionable findings and keep CI passing. Compiler
+updates need a reviewed full upstream commit in `GOOSE_REVISION` and full checks.
+Releases use semantic versions; the API may change before 1.0. Never move a
+published tag.
 
 ## Performance
 
-Run `make bench` for the Goose harness, or `make bench-compare` for the optional locked Rust JSON/Protobuf baselines. See [bench/README.md](bench/README.md) for measurement scope and reproducibility. Profile before optimizing. Preserve validation and ownership guarantees, report regressions and all fixtures, and keep raw samples with the compiler, hardware, flags, and source revision. CI checks benchmark execution, not timing thresholds. Do not claim a universal ranking from microbenchmarks.
+Profile before changing a hot path. [Benchmark instructions](bench/README.md)
+cover setup, workload, compiler settings and comparison limits. Keep all fixtures,
+slower results and raw samples. A result needs exact source/dependency/toolchain
+identities, not just a recent date. CI checks execution, not speed thresholds.
+Report vulnerabilities through the [security policy](SECURITY.md).

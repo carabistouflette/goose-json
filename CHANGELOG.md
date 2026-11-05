@@ -2,26 +2,13 @@
 
 ## Unreleased
 
-- Add a bounded signed-metadata consumer profile and phase-report calibration;
-  preserve original consumer pins and retain the unchanged codec.
+The codec implementation is unchanged from v0.1.3.
 
-- Check native short-copy bytes across alignments and guard-page edges; retain
-  rejected short-copy optimization and complete matched encode/decode results.
-
-- Add nested/large-output encoder correctness probes, separate throughput and
-  process peak-RSS recordings, and a bounded CI smoke; retain the baseline codec.
-
-- Add a phase-scoped encoder allocation/copy diagnostic with positive controls;
-  retain the measured counts and unchanged production implementation.
-
-- Check exact native number spellings for signed zero, subnormals, scientific
-  thresholds and exponent-width boundaries.
-- Add matched-build encoder recording with identical-source/executable controls;
-  retain rejected float-suffix experiments and the existing formatter.
-- Strengthen native string encoding coverage for exact Unicode/escape bytes,
-  prefix and output-chunk boundaries, and empty output on invalid UTF-8 tails.
-- Retain rejected prefix-reuse experiments and paired encoding measurements;
-  keep the existing production writer after repeatable dense-text regressions.
+- Add exact Unicode/escape, canonical-number, short-copy, alignment and guard-page tests.
+- Add bounded encode/decode, large-output, allocation/copy and signed-consumer
+  diagnostics. Keep complete observations and rejected optimization trials.
+- Simplify usage/API/build documentation, pin the quickstart to v0.1.3 and check
+  benchmark source/dependency identity against the recorded implementation.
 
 ## 0.1.3
 
