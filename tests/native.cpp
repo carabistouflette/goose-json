@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "../native/api.h"
 #include "../native/integer.h"
+#include "../native/codec.h"
 #include <cassert>
 #include <charconv>
 #include <cmath>
@@ -98,6 +99,21 @@ static void numbers() {
         }
         assert(total == length && at == (int64_t)text.size());
     }
+}
+
+static void copies() {
+    for (int size = 0; size <= 40; ++size)
+        for (int source_offset = 0; source_offset < 16; ++source_offset)
+            for (int output_offset = 0; output_offset < 16; ++output_offset) {
+                uint8_t source[64], output[64], expected[64];
+                for (int i = 0; i < 64; ++i)
+                    source[i] = (uint8_t)(i * 37);
+                memset(output, 0xa5, sizeof output);
+                memset(expected, 0xa5, sizeof expected);
+                memcpy(expected + output_offset, source + source_offset, (size_t)size);
+                gj_copy(output + output_offset, source + source_offset, size);
+                assert(memcmp(output, expected, sizeof output) == 0);
+            }
 }
 
 static void strings() {
@@ -217,6 +233,13 @@ static void guard_pages() {
     for (int n = 0; n < 256; ++n) {
         auto *s = mem + 2 * page - n;
         memset(s, 'a', n);
+        // Direct short-copy loads and stores must stop at the guard page.
+        uint8_t copied[256];
+        memset(copied, 0xa5, sizeof copied);
+        gj_copy(copied, s, n);
+        for (int i = 0; i < 256; ++i)
+            assert(copied[i] == (i < n ? 'a' : 0xa5));
+        gj_copy(s, copied, n);
         sl_u8 in{s, n};
         assert(gj_utf8(in) && gj_quote_prefix(in) == n);
         if (n >= 6) {
@@ -324,6 +347,7 @@ int main() {
     memcpy(packed + 1 + 63 * 8, &inf, 8);
     assert(gj_float_chunk({(double *)(void *)(packed + 1), 64}, {output + 1, 2112}, 0) == -1);
     numbers();
+    copies();
     strings();
     guard_pages();
     puts("native kernels: 1,000,000 integer and float patterns, string boundaries and guard pages passed");

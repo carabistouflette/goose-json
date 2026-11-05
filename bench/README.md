@@ -186,6 +186,11 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 ## Raw data and history
 
+The [short-copy experiment](results/short-copies-native-2026-11-05) retains all
+6,552 matched encode/decode batch averages and an identical-source control. One
+candidate failed its precommitted dense-gain gate; the original helper remains,
+with stronger copy/canary/guard tests and bidirectional measurement tooling.
+
 The [bounded nested/large encoder probe](results/large-encoder-2026-11-05)
 retains separate throughput and whole-process peak-RSS observations across exact
 output boundaries through 4 MiB, raw Unicode and expanding escapes. Independent

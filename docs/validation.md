@@ -401,3 +401,30 @@ cause of old timing shifts or proving host isolation. Source/harness hashes,
 input mutation checks, all samples and complete reproduction steps are retained.
 Historical records and release tags remain unchanged; shared-host/frequency/
 layout limitations continue to apply.
+
+## Short native copies and bidirectional acceptance
+
+The [short-copy record](../bench/results/short-copies-native-2026-11-05) retains
+one candidate, a precommitted gate and both complete matched-build recordings:
+6,552 batch averages across thirteen fixtures in both encode/decode directions.
+Identical-source binaries/code match and control summaries remain within ±3%.
+The candidate fails its dense-gain gate (−2.10%, −1.18%, +0.85% paired series;
+summary −1.18%, below required 5% and not faster in every series). No second
+variant or timing retry was attempted; the original helper is retained.
+
+Maintained tests now check full-buffer `memcpy` equivalence at lengths 0..40
+across all sixteen source × sixteen output alignments, plus guard-page loads/
+stores through 255 bytes. GCC/Clang native ASan/UBSan and public normal/debug/
+portable suites pass on both the candidate and restored implementation. Fresh
+Sol 6.1 ultra native review found no blockers; focused differential ASan/UBSan
+checks passed for scalar/SSE2/AVX2 under both compilers, 2,026,974 API calls per
+build, including escaping/unquoting, chunk capacities, alignment, malformed
+escapes, canaries and guard edges. Counts describe calls, not unique inputs.
+
+The bidirectional recorder retains matched paths/fresh caches/fixed mtimes,
+archived fingerprint checks, frozen binaries and full fixture/bit-roundtrip
+preflights. Timings include fresh owned output/destinations, error checks,
+consumption and cleanup. Its bytes field is canonical encoded length even for
+decode; no decoder throughput is inferred from that column. Statistics, all
+regressions, source hashes and shared-host/layout/frequency limits are recorded.
+Native/runtime/build sources and v0.1.3 remain unchanged.
