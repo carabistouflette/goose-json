@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a bounded signed-metadata consumer profile and phase-report calibration;
+  preserve original consumer pins and retain the unchanged codec.
+
 - Check native short-copy bytes across alignments and guard-page edges; retain
   rejected short-copy optimization and complete matched encode/decode results.
 
