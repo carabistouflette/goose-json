@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add nested/large-output encoder correctness probes, separate throughput and
+  process peak-RSS recordings, and a bounded CI smoke; retain the baseline codec.
+
 - Add a phase-scoped encoder allocation/copy diagnostic with positive controls;
   retain the measured counts and unchanged production implementation.
 

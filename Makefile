@@ -15,6 +15,7 @@ check:
 	"$(GOOSE)" check tests/formatting.goose
 	"$(GOOSE)" check examples/item.goose
 	"$(GOOSE)" check bench/bench.goose
+	"$(GOOSE)" check bench/large/encoder.goose
 test:
 	python3 scripts/native-manifest.py --check
 	"$(GOOSE)" run tests/codec.goose

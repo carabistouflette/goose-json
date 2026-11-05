@@ -186,6 +186,11 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 ## Raw data and history
 
+The [bounded nested/large encoder probe](results/large-encoder-2026-11-05)
+retains separate throughput and whole-process peak-RSS observations across exact
+output boundaries through 4 MiB, raw Unicode and expanding escapes. Independent
+byte/value oracles pass; no production optimization or speedup is claimed.
+
 The [encoder allocation/copy diagnostic](results/encoder-copies-2026-11-05)
 records phase-scoped operation counts across thirteen fixtures, with positive
 controls and explicit coverage limits. It found no allocation-focused production
