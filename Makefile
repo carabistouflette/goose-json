@@ -7,6 +7,8 @@ GOOSE ?= .toolchain/goose/build/goose
 setup:
 	./scripts/setup-goose.sh
 check:
+	python3 scripts/check-benchmark-sources.py --check
+	python3 scripts/benchmark-report.py --check
 	python3 bench/fixtures.py --check
 	python3 -m unittest discover -s tests -p 'test_*.py'
 	python3 scripts/native-manifest.py --check
@@ -14,6 +16,7 @@ check:
 	"$(GOOSE)" check tests/codec.goose
 	"$(GOOSE)" check tests/formatting.goose
 	"$(GOOSE)" check examples/item.goose
+	"$(GOOSE)" check examples/into.goose
 	"$(GOOSE)" check bench/bench.goose
 	"$(GOOSE)" check bench/large/encoder.goose
 test:
@@ -26,6 +29,7 @@ test:
 	"$(GOOSE)" build tests/formatting.goose -o .build/formatting
 	./.build/formatting
 	"$(GOOSE)" run examples/item.goose
+	"$(GOOSE)" run examples/into.goose
 	"$(GOOSE)" run bench/bench.goose -- 10
 test-debug:
 	python3 scripts/native-manifest.py --check

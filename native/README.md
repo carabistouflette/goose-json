@@ -1,95 +1,93 @@
-# Native kernels
+# Native implementation
 
-Goose owns all allocation, capacity checks and result lifetimes. These private
-C ABI functions receive bounded slices and write only inside supplied storage;
-no builder internals, padded loads or alignment assumptions are used. Goose's
-`i64&` and `f64&` can be byte-aligned, so output references use
-`gs_i64` / `gs_f64` with alignment 1.
-`unquote` receives input already UTF-8 validated by the entry point;
-`escape_chunk` follows successful validation by `quote_prefix`. These are private
-preconditions, with all buffer bounds enforced independently. Float-array elements are loaded and stored with `memcpy` for the same reason.
+Goose owns result storage and lifetimes. Private C functions receive bounded,
+nonoverlapping slices and never allocate or retain them. Loads and stores stay
+inside each slice; input padding and alignment are not required. Scalar output
+references use byte-aligned `gs_i64`/`gs_f64` types, and float-array elements use
+`memcpy` for unaligned access.
 
-CMake builds a C++17 static library. The generated Goose C only includes
-`select.h`; TinyCC, compilers other than GCC/Clang, and `GOOSE_JSON_FORCE_PORTABLE` select
-the Goose fallback.
-The native package still requires CMake and a C++ compiler in either mode.
-`select.h` also exposes bounded numeric adapters. Integer conversion uses the
-header-only `integer.h` kernel with GCC/Clang: eight-digit blocks move most work
-into 32-bit arithmetic. The kernel requires 20 output bytes and writes only its
-returned characters, including the full signed i64 range. The existing adapter
-continues requiring `GS_FMT_MAX` bytes before any write. TinyCC and other compilers
-retain the pinned Goose runtime integer formatter; the float adapter always uses
-that runtime. These paths are independent of application formatting hooks.
-Declarations live in `runtime.goose`, excluded from native symbol collection so
-TinyCC does not request external exports for header-only adapters. Goose retains
-builder allocation and float layout.
-SSE2/AVX2 scans use bounded unaligned loads when enabled by the compiler;
-other architectures use scalar scans. simdutf selects supported UTF-8 kernels
-at runtime. Deployment builds do not enable `-march=native` by default.
+String helpers have additional preconditions: `unquote` receives validated UTF-8;
+`escape_chunk` follows successful `quote_prefix` validation. These are internal
+interfaces. Applications should use the [public API](../docs/api.md).
 
-Run `make format` after changing this directory or CMakeLists.txt. It refreshes
-`json_codec.build` with a source fingerprint, invalidating Goose's local native
-package cache. `make check` and benchmark builds reject a stale fingerprint.
+## Build and fallback
+
+CMake builds a C++17 static library. GCC/Clang builds use its string/float kernels
+and a bounded integer converter. TinyCC, other C compilers and
+`GOOSE_JSON_FORCE_PORTABLE` select the Goose fallback. **CMake and a C++ compiler
+are still required in fallback mode.**
+
+SSE2/AVX2 scans are enabled when supported by the compiler target. simdutf chooses
+its UTF-8 implementation at runtime. Default deployment builds do not add
+`-march=native`; the benchmark's optional native profile does. Linux x86-64 is
+tested; scalar code paths do not establish support for another platform.
+
+Numeric conversion does not use application formatting overloads. Header-only
+adapters are declared in `runtime.goose`; `select.h` checks output capacity before
+calling them. Goose still appends the resulting bytes and chooses float layout.
+Float parsing examines at most 129 bytes and rejects tokens above 128 bytes.
+Failed native float conversions fall back to Goose for range/underflow handling.
+Float arrays use batches of 64; a failed parse batch is reparsed in Goose.
+
+After changing this directory or `CMakeLists.txt`, run:
+
+```sh
+make format
+make check
+```
+
+This refreshes `json_codec.build`, whose source hash invalidates Goose's local
+native-package cache. The hash includes this README; a documentation-only change
+can refresh the hash without changing compiled code. Build fields and source
+identity are checked separately in the [benchmark source comparison](../bench/CURRENTNESS.md).
 
 ## Testing
-
-Standalone tests and the fuzzer link this same CMake library target, with
-ASan/UBSan instrumentation enabled only for these opt-in developer builds:
 
 ```sh
 make test-native CXX=clang++
 make test-native CXX=g++
-make fuzz-native FUZZ_RUNS=1000000
-make fuzz-native FUZZ_FLAGS=-march=native FUZZ_RUNS=1000000
+make fuzz-native FUZZ_RUNS=10000
+make fuzz-native FUZZ_FLAGS=-march=native FUZZ_RUNS=10000
 ```
 
-The Clang libFuzzer harness checks output bounds, chunk progress, UTF-8 escaping
-round-trips, finite float bit round-trips against `strtod`, and byte-aligned float
-arrays. Seeds come from the benchmark fixtures and a JSON/Unicode dictionary.
-Inputs are capped at 16 KiB per fuzz case; the public API's larger resource limits
-are covered separately by `tests/codec.goose`. CI runs bounded fuzz campaigns on
-every push. Local findings are saved under `.build/fuzz-artifacts/`.
+The tests link the same library with ASan/UBSan. They check integer/float spelling,
+bit roundtrips, exact string bytes, chunk progress, short buffers, unaligned
+accesses and guard pages. libFuzzer inputs are capped at 16 KiB; public input
+limits are tested separately. CI runs bounded fuzz checks without speed thresholds.
+Increase `FUZZ_RUNS` for longer local campaigns. Reproducers go in
+`.build/fuzz-artifacts/`.
 
-The default build enables SSE2 scans on x86-64; `-march=native` also exercises
-AVX2 where available. To exercise scalar scanner branches on x86-64, run with
-`FUZZ_FLAGS="-U__SSE2__ -U__AVX2__"`. This does not emulate another architecture.
+On x86-64, `FUZZ_FLAGS='-U__SSE2__ -U__AVX2__'` exercises scalar scanner branches.
+This is not another architecture's test. Native AVX2 checks require a supporting CPU.
 
-## Vendored dependencies
+## Vendored sources
 
-The following source files are unmodified. Their notices and upstream
-license alternatives are preserved alongside them. This package uses the
-Apache license alternatives, including Dragonbox's LLVM exception.
+Original notices and license alternatives are kept beside the source files;
+see [NOTICE](../NOTICE). C++ namespaces are renamed at build time to avoid
+collisions with another package's copies. Runtime execution needs no network or
+external package manager; first-time Goose dependency fetching may need Git/network.
 
-- Dragonbox: https://github.com/jk-jeon/dragonbox at
-  `beeeef91cf6fef89a4d4ba5e95d47ca64ccb3a44`.
-  `include/dragonbox/{dragonbox.h,dragonbox_to_chars.h}` and
-  `source/dragonbox_to_chars.cpp` are copied to `vendor/dragonbox/`.
-  Apache-2.0 WITH LLVM-exception or BSL-1.0.
-- simdutf: https://github.com/simdutf/simdutf at
-  `4ab2be54f0b41536d5258675ffad7ba5d10fe384`.
-  Apache-2.0 or MIT. UTF-8-only amalgamation, produced from that checkout:
+| Dependency | Source revision | Files / license used here |
+| --- | --- | --- |
+| [Dragonbox](https://github.com/jk-jeon/dragonbox) | `beeeef91cf6fef89a4d4ba5e95d47ca64ccb3a44` | `dragonbox.h`, `dragonbox_to_chars.h/.cpp`; Apache-2.0 WITH LLVM-exception |
+| [simdutf](https://github.com/simdutf/simdutf) | `4ab2be54f0b41536d5258675ffad7ba5d10fe384` | UTF-8-only amalgamation; Apache-2.0 |
+| [fast_float](https://github.com/fastfloat/fast_float) | `dbeabeeb3e6791cb96994c2a7a084c36e62ccfb2` | Single-header amalgamation; Apache-2.0 |
 
-  ```sh
-  python3 singleheader/amalgamate.py --with-utf8 --source-dir src \
-    --include-dir include --output-dir /path/to/native/vendor/simdutf \
-    --no-zip --no-readme
-  ```
+To regenerate simdutf from its pinned upstream checkout:
 
-  Only `simdutf.cpp` and `simdutf.h` are retained, with the upstream licenses.
+```sh
+python3 singleheader/amalgamate.py --with-utf8 --source-dir src \
+  --include-dir include --output-dir /path/to/native/vendor/simdutf \
+  --no-zip --no-readme
+```
 
-- fast_float: https://github.com/fastfloat/fast_float at
-  `dbeabeeb3e6791cb96994c2a7a084c36e62ccfb2`.
-  Apache-2.0 or MIT or BSL-1.0. Generate the single header with
-  `python3 script/amalgamate.py > /path/to/native/vendor/fast_float/fast_float.h`
-  from that checkout. Original licenses are retained alongside it.
+Keep only `simdutf.cpp`, `simdutf.h` and its original licenses. Generate fast_float
+from its pinned checkout with:
 
-Dragonbox, fast_float and simdutf use package-specific C++ namespaces to avoid
-collisions with another dependency's vendored version. The package sidecar
-excludes toolchain checkouts, build scratch, benchmarks, tests and examples from
-Goose's native symbol collection; only library modules supply package symbols.
+```sh
+python3 script/amalgamate.py > /path/to/native/vendor/fast_float/fast_float.h
+```
 
-Numeric reads use fast_float's strict JSON mode on a bounded 129-byte window;
-consumption beyond 128 bytes is rejected. Conversion failures fall back to
-Goose to preserve range/underflow behavior. Float arrays use batches of 64;
-a failed batch reparses the array with Goose. The fast_float namespace is private.
-No runtime network access or external package manager is required.
+Dragonbox files are copied from `include/dragonbox/` and `source/` at its pinned
+revision. The compiler collects package symbols only from library modules, not
+examples, tests, benchmark files or header-only adapters.
