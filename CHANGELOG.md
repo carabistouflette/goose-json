@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Check exact native number spellings for signed zero, subnormals, scientific
+  thresholds and exponent-width boundaries.
+- Add matched-build encoder recording with identical-source/executable controls;
+  retain rejected float-suffix experiments and the existing formatter.
 - Strengthen native string encoding coverage for exact Unicode/escape bytes,
   prefix and output-chunk boundaries, and empty output on invalid UTF-8 tails.
 - Retain rejected prefix-reuse experiments and paired encoding measurements;

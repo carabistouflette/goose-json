@@ -363,3 +363,41 @@ native threshold. Normal/debug/portable suites and end-to-end Clang ASan/UBSan
 and again for the final retained writer with the stronger tests. No unchanged
 SIMD/floating fuzz campaign was repeated. CI continues the maintained native
 sanitizer and bounded fuzz checks.
+
+## Float suffix bounds and matched-build measurement
+
+The [float-suffix record](../bench/results/float-suffix-native-2026-11-05) retains
+both bounded-normalization variants, a legacy identical-source control, a
+matched-build identical-executable control and the corrected final comparison:
+all thirteen encoder fixtures and all 8,190 timed batch averages. No timing is
+corrected or normalized against a control. Differences on untouched paths are
+not attributed to algorithmic changes. The final tradeoff did not meet the
+acceptance bar; native/runtime/build sources remain byte-identical to `v0.1.3`.
+
+The retained native tests check fifteen exact spellings: signed zeros, fixed/
+scientific thresholds, one-/two-/three-digit exponents, maximum finite value
+and both signs of the minimum subnormal. Both GCC and Clang native ASan/UBSan
+suites and normal/debug/portable public suites passed for each candidate and
+again for the restored formatter with the new tests.
+
+Root's original-loop byte oracle passed 1,003,808 cases per candidate under
+Clang ASan/UBSan. Independent Sol 6.1 ultra review found no blockers for either
+variant. The first compiled actual baseline/candidate with GCC/Clang ASan/UBSan,
+527,490 cases per compiler. The four-byte variant was independently checked
+against both baselines with 298,114 patterns per compiler, including every IEEE
+exponent field and decimal-power ±4 ULP neighbors. Each review covered full
+buffers/lengths, finite bit roundtrips, sixteen alignments, guard pages, 7,800
+chunk/capacity cases and the fifteen canonical spellings. Counts describe test
+executions, not a claimed disjoint union of inputs. No unchanged SIMD/string/
+integer fuzz campaign was added beyond the maintained native regression suite.
+
+An identical-source control exposed different executables under the legacy
+asymmetric build procedure. The separate matched-build recorder extracts both
+Git revisions to the same source/entry/output paths, uses fresh Goose caches at
+the same path and fixes production-source mtimes. Its A/A control produced
+identical complete executables and matching `.text`/`.rodata` hashes. This
+removes uncontrolled build-procedure differences without identifying a single
+cause of old timing shifts or proving host isolation. Source/harness hashes,
+input mutation checks, all samples and complete reproduction steps are retained.
+Historical records and release tags remain unchanged; shared-host/frequency/
+layout limitations continue to apply.
