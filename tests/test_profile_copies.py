@@ -3,6 +3,7 @@
 import importlib.util
 from pathlib import Path
 import shutil
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -18,7 +19,8 @@ class CopyProfileTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             probe.instrument('int main(void) { return 0; }')
 
-    @unittest.skipUnless(shutil.which('gcc') and shutil.which('ld'), 'requires GNU compiler/linker')
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc') and shutil.which('ld'),
+                         'requires Linux GNU compiler/linker')
     def test_phase_counters_have_positive_controls(self):
         source = '''
 #include <stdio.h>

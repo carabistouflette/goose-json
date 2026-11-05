@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a phase-scoped encoder allocation/copy diagnostic with positive controls;
+  retain the measured counts and unchanged production implementation.
+
 - Check exact native number spellings for signed zero, subnormals, scientific
   thresholds and exponent-width boundaries.
 - Add matched-build encoder recording with identical-source/executable controls;
