@@ -196,6 +196,7 @@ def main():
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             records = []
+            metadata['records'] = records
             try:
                 requests = [('original-control', 'original', raw, True, 'None')]
                 requests += [('invalid-signature', 'instrumented', raw, False, 'Signature'),

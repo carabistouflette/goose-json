@@ -186,6 +186,11 @@ values use ten-byte varints, not zigzag `sint64`. Times are ns/op.
 
 ## Raw data and history
 
+The [existing artifact-consumer profile](results/artifact-consumer-2026-11-05)
+observes signed-metadata parsing within a complete loopback-HTTPS download. Its
+original JSON v0.1.2 pin is preserved; seven cold-process profiles and ordering
+controls do not demonstrate a JSON bottleneck or justify a runtime change.
+
 The [short-copy experiment](results/short-copies-native-2026-11-05) retains all
 6,552 matched encode/decode batch averages and an identical-source control. One
 candidate failed its precommitted dense-gain gate; the original helper remains,
