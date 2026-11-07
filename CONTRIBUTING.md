@@ -8,8 +8,11 @@ binaries, compiler caches or private workspace notes.
 ## Checks
 
 Use the compiler in [GOOSE_REVISION](GOOSE_REVISION). `make setup` builds it;
-Goose source builds need CMake 3.27+ and a C/C++20 toolchain. With an existing
-compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
+Goose source builds need CMake 3.27+ and a C/C++20 toolchain. The Ethereum
+consumer integration additionally needs pkg-config and libcurl 7.85 or newer
+with development headers and libraries, and fetches its commit-pinned goose-http
+dependency.
+With an existing compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
 
 ```sh
 make format
