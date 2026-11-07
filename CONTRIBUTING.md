@@ -11,7 +11,8 @@ Use the compiler in [GOOSE_REVISION](GOOSE_REVISION). `make setup` builds it;
 Goose source builds need CMake 3.27+ and a C/C++20 toolchain. The Ethereum
 consumer integration additionally needs pkg-config and libcurl 7.85 or newer
 with development headers and libraries, and fetches its commit-pinned goose-http
-dependency.
+and goose-json dependencies. Integration tests exercise both the pinned reader
+and a generated copy of the consumer using the current checkout.
 With an existing compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
 
 ```sh

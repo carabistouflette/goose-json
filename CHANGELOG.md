@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pin the Ethereum consumer and quickstart to the exact v0.2.0 release commit.
+
 ## 0.2.0 (experimental)
 
 The strict struct codec implementation is unchanged from v0.1.3.

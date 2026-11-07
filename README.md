@@ -16,7 +16,7 @@ Clang; other platforms are unverified.
 Save this as `main.goose`, then run `goose run main.goose`:
 
 ```goose
-import json_codec from "carabistouflette/goose-json@aae48035f73e09b51011950ff12bfe424e0ec921";
+import json_codec from "carabistouflette/goose-json@fcee7b75658a5708756dc163127b70df656996a4";
 import os;
 
 struct Item { id: i64, active: bool, name: json_codec::Text }
@@ -37,10 +37,9 @@ Output:
 {"id":42,"active":true,"name":"Goose"}
 ```
 
-The example pins **v0.1.3**, an experimental prerelease. Main has additional tests,
-profiling tools and documentation; its codec implementation is unchanged from that
-release. See the [changelog](CHANGELOG.md) and checked
-[source comparison](bench/CURRENTNESS.md). The API may change before 1.0.
+The example pins **v0.2.0**, an experimental prerelease, by its exact commit.
+The strict struct codec remains unchanged from v0.1.3. See the
+[changelog](CHANGELOG.md) and checked [source comparison](bench/CURRENTNESS.md). The API may change before 1.0.
 
 ## Supported values
 
@@ -67,16 +66,17 @@ These are input limits, not a memory budget. Serialization has no output cap.
 ## Select protocol fields
 
 The `json_codec.protocol` module, available starting with v0.2.0, selects
-owned raw values from a validated JSON object. It distinguishes missing members from `null` and
-preserves exact number tokens. See the [selective reader API](docs/api.md#select-json-object-members)
-for the interface, limits and JSON-RPC example. It requires a checkout or commit
-containing this module; the v0.1.3 pin in the quickstart predates it.
+owned raw values from a validated JSON object. It distinguishes missing members
+from `null` and preserves exact number tokens. See the [selective reader API](docs/api.md#select-json-object-members)
+for the interface, limits and JSON-RPC example.
 
 ## Read an Ethereum block number
 
-The [Ethereum JSON-RPC consumer](examples/ethereum_rpc.goose), included starting
-with v0.2.0, posts `eth_blockNumber` to an endpoint with numeric ID `1`, then validates the
-JSON-RPC response and matching ID:
+The [Ethereum JSON-RPC consumer](examples/ethereum_rpc.goose) posts
+`eth_blockNumber` to an endpoint with numeric ID `1`, then validates the
+JSON-RPC response and matching ID. The copy in this checkout pins goose-json
+to the exact v0.2.0 release commit; the copy in the v0.2.0 tag imports its
+checkout. Run it with:
 
 ```sh
 goose run examples/ethereum_rpc.goose -- https://your-rpc-endpoint.example/
@@ -94,8 +94,8 @@ error codes and prints the exact error JSON as ASCII hex on stderr, preserving
 its bytes without displaying untrusted terminal controls. The application makes
 one transport call and does not retry; the transport does not follow redirects.
 The timeout is not a hard wall-clock deadline if DNS cleanup stalls. The
-loopback integration suite runs with `make test`; no live endpoint is
-contacted by the tests.
+loopback integration suite runs with `make test` against both the pinned reader
+and the current checkout; no live endpoint is contacted by the tests.
 
 ## Performance
 
