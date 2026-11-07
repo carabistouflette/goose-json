@@ -19,6 +19,10 @@ fn test_selection() {
     assert(json_codec::protocol_present(result, 2) && json_codec::protocol_value(result, 2) == "null");
     assert(json_codec::protocol_value(result, 1) == "9007199254740993");
     assert(!json_codec::protocol_present(result, 3));
+    assert(json_codec::protocol_select("{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32601,\"message\":\"not found\"}}", names, result).len == 0);
+    assert(!json_codec::protocol_present(result, 2));
+    assert(json_codec::protocol_value(result, 3) == "{\"code\":-32601,\"message\":\"not found\"}");
+    assert(json_codec::protocol_select(input, names, result).len == 0);
     input.clear();
     assert(json_codec::protocol_value(result, 0) == "\"2.0\"");
     assert(json_codec::protocol_select("{\"\\u0069d\":1e999,\"result\": [ 1, {\"x\":true} ]}", names, result).len == 0);

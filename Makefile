@@ -30,6 +30,10 @@ test:
 	"$(GOOSE)" run .build/protocol-independent-review.goose --debug
 	"$(GOOSE)" run tests/protocol.goose --debug
 	"$(GOOSE)" run tests/protocol_bounds.goose --debug
+	"$(GOOSE)" build tests/protocol.goose --cc gcc -O2 -o .build/protocol-optimized
+	./.build/protocol-optimized
+	"$(GOOSE)" build tests/protocol_bounds.goose --cc gcc -O2 -o .build/protocol-bounds-optimized
+	./.build/protocol-bounds-optimized
 	mkdir -p .build
 	"$(GOOSE)" build tests/protocol.goose --cc gcc --debug -D GOOSE_JSON_FORCE_PORTABLE -o .build/protocol-portable
 	./.build/protocol-portable
