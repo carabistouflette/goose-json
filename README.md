@@ -64,6 +64,14 @@ Input is limited to **1 MiB** and floating-point tokens to **128 bytes**.
 Invalid UTF-8, out-of-range integers and non-finite floats are rejected.
 These are input limits, not a memory budget. Serialization has no output cap.
 
+## Select protocol fields
+
+The unreleased `json_codec.protocol` module selects owned raw values from a
+validated JSON object. It distinguishes missing members from `null` and
+preserves exact number tokens. See the [selective reader API](docs/api.md#select-json-object-members)
+for the interface, limits and JSON-RPC example. It requires a checkout or commit
+containing this module; the v0.1.3 pin in the quickstart predates it.
+
 ## Performance
 
 [Recorded comparisons](bench/RESULTS.md) cover thirteen fixtures, with all results,

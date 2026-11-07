@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-The codec implementation is unchanged from v0.1.3.
+The strict struct codec implementation is unchanged from v0.1.3.
+
+- Add the optional bounded protocol reader for selecting owned raw JSON values,
+  with whole-document validation and explicit resource limits.
 
 - Add exact Unicode/escape, canonical-number, short-copy, alignment and guard-page tests.
 - Add bounded encode/decode, large-output, allocation/copy and signed-consumer

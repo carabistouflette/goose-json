@@ -12,15 +12,29 @@ check:
 	python3 bench/fixtures.py --check
 	python3 -m unittest discover -s tests -p 'test_*.py'
 	python3 scripts/native-manifest.py --check
-	"$(GOOSE)" format --check json_codec.goose native/runtime.goose examples tests bench
+	"$(GOOSE)" format --check json_codec.goose protocol.goose native/runtime.goose examples tests bench
+	"$(GOOSE)" check tests/protocol.goose
+	"$(GOOSE)" check tests/protocol_bounds.goose
 	"$(GOOSE)" check tests/codec.goose
 	"$(GOOSE)" check tests/formatting.goose
+	"$(GOOSE)" check examples/protocol.goose
 	"$(GOOSE)" check examples/item.goose
 	"$(GOOSE)" check examples/into.goose
 	"$(GOOSE)" check bench/bench.goose
 	"$(GOOSE)" check bench/large/encoder.goose
 test:
 	python3 scripts/native-manifest.py --check
+	"$(GOOSE)" run tests/protocol.goose
+	"$(GOOSE)" run tests/protocol_bounds.goose
+	python3 scripts/protocol-independent-fixtures.py
+	"$(GOOSE)" run .build/protocol-independent-review.goose --debug
+	"$(GOOSE)" run tests/protocol.goose --debug
+	"$(GOOSE)" run tests/protocol_bounds.goose --debug
+	mkdir -p .build
+	"$(GOOSE)" build tests/protocol.goose --cc gcc --debug -D GOOSE_JSON_FORCE_PORTABLE -o .build/protocol-portable
+	./.build/protocol-portable
+	"$(GOOSE)" build tests/protocol_bounds.goose --cc gcc --debug -D GOOSE_JSON_FORCE_PORTABLE -o .build/protocol-bounds-portable
+	./.build/protocol-bounds-portable
 	"$(GOOSE)" run tests/codec.goose
 	"$(GOOSE)" run tests/formatting.goose
 	mkdir -p .build
@@ -28,6 +42,7 @@ test:
 	./.build/codec
 	"$(GOOSE)" build tests/formatting.goose -o .build/formatting
 	./.build/formatting
+	"$(GOOSE)" run examples/protocol.goose
 	"$(GOOSE)" run examples/item.goose
 	"$(GOOSE)" run examples/into.goose
 	"$(GOOSE)" run bench/bench.goose -- 10

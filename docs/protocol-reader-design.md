@@ -1,7 +1,7 @@
 # Proposed bounded protocol JSON reader
 
-Status: design proposal; no new public interface has been implemented. The
-initial use case is reading one JSON-RPC response, including an arbitrary
+Status: initial design; see [API documentation](api.md#select-json-object-members)
+for the implemented interface. The initial use case is reading one JSON-RPC response, including an arbitrary
 `result` or `error.data`. The existing struct codec remains the default.
 
 ## Proposed interface
@@ -27,9 +27,8 @@ floating point, and strings retain quotes and escapes. A caller can decode a
 selected string or integer with the existing strict codec, or apply this
 operation again to a selected object. Each invocation has its own limits;
 applications making repeated calls must bound the number of calls themselves.
-Input and selector storage must be disjoint from the output destination; this
-is a caller precondition. Investigate whether the compiler can enforce or
-detect aliasing before the interface is finalized.
+The implementation accepts input and selectors that alias the destination by
+finishing all reads into scratch storage before replacing it.
 Arrays and arbitrary nested values can be retained as raw JSON. Array indexing,
 a mutable tree, and JSON writing are outside this initial proposal.
 
@@ -136,8 +135,7 @@ strict JSON implementation where policies coincide, with separate oracles for
 duplicate keys and numerical lexemes. Exercise debug and optimized builds with
 the pinned compiler and the existing portable path.
 
-Before implementation, confirm the standard reader's behavior at the pinned
-revision and demonstrate that any helpers used meet this contract. Review the
-interface and limit accounting independently, then add maintained tests for the
-published contract and measure representative real inputs before claiming
-performance. This plan does not establish platform qualification or results.
+The implementation uses the pinned reader after preflighting object keys,
+validates UTF-8 and surrogate output, and has independent boundary and Python
+differential fixtures. The checks and reviews do not establish platform
+qualification or a performance claim.

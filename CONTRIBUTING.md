@@ -13,6 +13,7 @@ compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
 
 ```sh
 make format
+"${GOOSE:-.toolchain/goose/build/goose}" format protocol.goose
 make check test test-debug test-portable
 ```
 
