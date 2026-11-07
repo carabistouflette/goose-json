@@ -78,8 +78,8 @@ still apply. See [native build details](../native/README.md).
 
 ## Select JSON object members
 
-The optional selective reader is unreleased and requires a checkout or commit
-containing `protocol.goose`; it is absent from the README’s v0.1.3 pin.
+The optional selective reader is available starting with v0.2.0; it is absent
+from the README’s v0.1.3 quickstart pin.
 Import `json_codec.protocol` to use it (this example is clone-relative):
 
 ```goose

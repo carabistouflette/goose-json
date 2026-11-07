@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 (experimental)
+
 The strict struct codec implementation is unchanged from v0.1.3.
 
 - Add the optional bounded protocol reader for selecting owned raw JSON values,
