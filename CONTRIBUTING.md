@@ -13,6 +13,7 @@ compiler, pass `GOOSE=/absolute/path/to/goose` to Make.
 
 ```sh
 make format
+"${GOOSE:-.toolchain/goose/build/goose}" format protocol.goose
 make check test test-debug test-portable
 ```
 
@@ -26,7 +27,8 @@ make test-native CXX=g++
 [Native testing](native/README.md#testing) describes bounded fuzz checks.
 `make format` updates the native package's cache hash; `make check` rejects a stale
 hash and checks the benchmark source comparison. Add public behavior regressions
-in `tests/codec.goose` or `tests/formatting.goose`. The latter installs application
+in the relevant module tests: `tests/codec.goose` for the struct codec and `tests/protocol.goose` or `tests/protocol_bounds.goose`
+for the optional protocol reader. `tests/formatting.goose` installs application
 formatting overloads. Test malformed input, ownership and empty output on errors.
 
 ## Design and review

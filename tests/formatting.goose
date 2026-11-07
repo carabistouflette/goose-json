@@ -2,6 +2,7 @@
 // Consumer formatting overloads must not affect JSON validity or diagnostics.
 import std;
 import json_codec from "..";
+import json_codec.protocol;
 
 fn format(out: u8[>..]&, value: const u8[:]) {}
 fn format(out: u8[>..]&, value: i64) {}
@@ -17,6 +18,9 @@ fn reject(text: u8[:]) {
     assert(error.len > 0);
 }
 fn test_errors() {
+    var protocol_result = json_codec::ProtocolResult { .. };
+    let keys: (const u8[:])[1] = ["x"];
+    assert(json_codec::protocol_select("{", keys, protocol_result).len > 0);
     for text in ["", "invalid", "{}", "{\"other\":1}", "{\"value\":1,\"value\":2}",
                  "{\"value\":1}x", "{\"value\":01}", "{\"value\":9223372036854775808}",
                  "{\"value\":1.5}", "{\"value\":true}"] { reject(text); }
