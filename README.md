@@ -72,6 +72,30 @@ preserves exact number tokens. See the [selective reader API](docs/api.md#select
 for the interface, limits and JSON-RPC example. It requires a checkout or commit
 containing this module; the v0.1.3 pin in the quickstart predates it.
 
+## Read an Ethereum block number
+
+The unreleased [Ethereum JSON-RPC consumer](examples/ethereum_rpc.goose) posts
+`eth_blockNumber` to an endpoint with numeric ID `1`, then validates the
+JSON-RPC response and matching ID:
+
+```sh
+goose run examples/ethereum_rpc.goose -- https://your-rpc-endpoint.example/
+```
+
+It imports the published `goose-http` commit
+`c2310d8403d93b24b65eb45e9dae11e36183514d`; first use needs network access
+or a pre-fetched package, CMake, a C compiler and libcurl development files
+for libcurl 7.85 or newer.
+HTTPS is required unless `--allow-http` is explicitly provided, for example
+when running a local fixture.
+The client returns a canonical lowercase hexadecimal quantity of at most 64
+hex digits; a null result is reported separately. It accepts signed 64-bit RPC
+error codes and prints the exact error JSON as ASCII hex on stderr, preserving
+its bytes without displaying untrusted terminal controls. The application makes
+one transport call and does not retry; the transport does not follow redirects.
+The timeout is not a hard wall-clock deadline if DNS cleanup stalls. The loopback integration suite runs
+with `make test`; no live endpoint is contacted by the tests.
+
 ## Performance
 
 [Recorded comparisons](bench/RESULTS.md) cover thirteen fixtures, with all results,

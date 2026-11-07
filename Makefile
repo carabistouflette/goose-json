@@ -17,6 +17,8 @@ check:
 	"$(GOOSE)" check tests/protocol_bounds.goose
 	"$(GOOSE)" check tests/codec.goose
 	"$(GOOSE)" check tests/formatting.goose
+	"$(GOOSE)" fetch examples/ethereum_rpc.goose
+	"$(GOOSE)" check examples/ethereum_rpc.goose
 	"$(GOOSE)" check examples/protocol.goose
 	"$(GOOSE)" check examples/item.goose
 	"$(GOOSE)" check examples/into.goose
@@ -46,6 +48,10 @@ test:
 	./.build/codec
 	"$(GOOSE)" build tests/formatting.goose -o .build/formatting
 	./.build/formatting
+	"$(GOOSE)" build examples/ethereum_rpc.goose -o .build/ethereum-rpc
+	python3 tests/ethereum_rpc_integration.py .build/ethereum-rpc
+	"$(GOOSE)" build examples/ethereum_rpc.goose --debug -o .build/ethereum-rpc-debug
+	python3 tests/ethereum_rpc_integration.py .build/ethereum-rpc-debug
 	"$(GOOSE)" run examples/protocol.goose
 	"$(GOOSE)" run examples/item.goose
 	"$(GOOSE)" run examples/into.goose
