@@ -52,6 +52,9 @@ test:
 	python3 tests/ethereum_rpc_integration.py .build/ethereum-rpc
 	"$(GOOSE)" build examples/ethereum_rpc.goose --debug -o .build/ethereum-rpc-debug
 	python3 tests/ethereum_rpc_integration.py .build/ethereum-rpc-debug
+	python3 scripts/local-ethereum-fixture.py
+	"$(GOOSE)" build .build/ethereum-rpc-local.goose --debug -o .build/ethereum-rpc-local
+	python3 tests/ethereum_rpc_integration.py .build/ethereum-rpc-local
 	"$(GOOSE)" run examples/protocol.goose
 	"$(GOOSE)" run examples/item.goose
 	"$(GOOSE)" run examples/into.goose

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Read the current Ethereum block number from one JSON-RPC endpoint.
-import json_codec from "..";
+import json_codec from "carabistouflette/goose-json@fcee7b75658a5708756dc163127b70df656996a4";
 import json_codec.protocol;
 import http from "carabistouflette/goose-http@c2310d8403d93b24b65eb45e9dae11e36183514d";
 import std;
